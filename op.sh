@@ -336,6 +336,25 @@ else:
                 *)
                     print_info "API Server: op api [start|stop|restart]"
                     ;;
+        "engine")
+            # 双引擎控制命令
+            shift
+            case "${1:-}" in
+                "custom")
+                    "$PYTHON_CMD" "$SCRIPT_DIR/dual_engine.py" --engine custom
+                    ;;
+                "native")
+                    "$PYTHON_CMD" "$SCRIPT_DIR/dual_engine.py" --engine native
+                    ;;
+                "status")
+                    "$PYTHON_CMD" "$SCRIPT_DIR/dual_engine.py" --status
+                    ;;
+                *)
+                    print_info "双引擎控制: op engine [custom|native|status]"
+                    echo "  custom  - 自定义智能调度引擎"
+                    echo "  native  - OpenCode 原生引擎"
+                    echo "  status - 查看引擎状态"
+                    ;;
             esac
             ;;
         "version"|"-v"|"--version")

@@ -1,6 +1,6 @@
 # 🧠 OpenCode Smart Model Selector
 
-[![Version](https://img.shields.io/badge/Version-v2.1.0-blue.svg)](https://github.com/wuleiyuan/opencode-smart-model-selector/releases)
+[![Version](https://img.shields.io/badge/Version-v2.2.0-blue.svg)](https://github.com/wuleiyuan/opencode-smart-model-selector/releases)
 [![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/wuleiyuan/opencode-smart-model-selector?style=social)](https://github.com/wuleiyuan/opencode-smart-model-selector/stargazers)

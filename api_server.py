@@ -421,10 +421,18 @@ class APIServer:
             }
         }), 400
     
-    def run(self):
-        """启动服务器"""
         logger.info(f"启动 API Server: http://{self.host}:{self.port}")
-        self.app.run(host=self.host, port=self.port, debug=False)
+        # 尝试使用 gunicorn 提高并发性能
+        try:
+            import gunicorn
+            # gunicorn 方式启动
+            from gunicorn.app.wsgiapp import WSGIApplication
+            logger.info("使用 gunicorn 并发服务器")
+            WSGIApplication("__main__:app").run()
+        except ImportError:
+            # 降级到 Flask 内置服务器
+            logger.warning("gunicorn 未安装，使用 Flask 内置服务器")
+            self.app.run(host=self.host, port=self.port, debug=False, threaded=True)
 
 
 def main():

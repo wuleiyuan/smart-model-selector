@@ -7,7 +7,7 @@ OpenCode Smart Model Selector 版本管理模块
 - PATCH: 向后兼容的 bug 修复
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "OpenCode Team"
 __description__ = "智能模型调度系统"
 
@@ -37,6 +37,16 @@ VERSION_HISTORY = {
         - 新增 op api start/stop/restart 命令
         - 支持作为 Openclaw 模型供应商
         - 支持 /v1/chat/completions 和 /v1/models 端点
+    },
+    "2.2.0": {
+        "date": "2026-02-27",
+        "description": """
+        新增功能:
+        - 双引擎架构 (dual_engine.py) - 自定义 + 原生冗余
+        - 熔断降级机制 - 连续3次失败自动切换
+        - API Server 并发优化 - gunicorn 支持
+        - 测速缓存生命周期 - 4小时后自动刷新
+        - op engine 命令 - 手动切换引擎
         """
     }
 }

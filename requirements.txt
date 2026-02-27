@@ -3,5 +3,5 @@ python-dotenv>=1.0.0
 typing-extensions>=4.7.0
 jq>=1.7.1
 pytest>=8.0.0
-mypy>=1.0.0
 flask>=3.0.0
+gunicorn>=21.0.0
