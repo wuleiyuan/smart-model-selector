@@ -228,7 +228,7 @@ class OpenClawAdapter(BaseAPIServerAdapter):
             "status": "ok",
             "service": "Smart Model Selector",
             "platform": "openclaw",
-            "version": "3.0.0"
+            "version": "4.0.0"
         }
 
 

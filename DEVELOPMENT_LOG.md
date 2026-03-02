@@ -4,7 +4,7 @@ WZ|# Smart Model Selector 开发记录
 
 NW|智能模型选择系统 - 兼容 OpenCode/OpenClaw，支持多个免费 API 智能轮换，无需付费即可享受最优 AI 模型体验。
 
-VY|RV|**当前版本**: v3.0.0
+**当前版本**: v4.0.0
 
 ---
 
