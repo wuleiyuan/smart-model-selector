@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-MB|name = "smart-model-selector"
+name = "smart-model-selector"
 version = "4.0.0"
 description = "OpenCode Smart Model Selector - AI model routing system with load balancing and failover"
 readme = "README.md"
@@ -49,10 +49,7 @@ dev = [
 op = "op:main"
 
 [project.urls]
-ZR|Homepage = "https://github.com/wuleiyuan/smart-model-selector"
-TR|Repository = "https://github.com/wuleiyuan/smart-model-selector"
-XZ|Issues = "https://github.com/wuleiyuan/smart-model-selector/issues"
-QZ|Wiki = "https://github.com/wuleiyuan/smart-model-selector/wiki"
+Homepage = "https://github.com/wuleiyuan/opencode-smart-model-selector"
 Repository = "https://github.com/wuleiyuan/opencode-smart-model-selector"
 Issues = "https://github.com/wuleiyuan/opencode-smart-model-selector/issues"
 Wiki = "https://github.com/wuleiyuan/opencode-smart-model-selector/wiki"
