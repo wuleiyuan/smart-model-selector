@@ -62,6 +62,15 @@ class APIServer:
         # 注册路由
         self._register_routes()
         
+        # 注册 V3 路由 (工厂模式)
+        try:
+            from selector_factory import SelectorFactory
+            self._register_v3_routes()
+            logger.info("[V3] 工厂模式路由注册完成")
+        except ImportError as e:
+            logger.warning(f"[V3] 工厂模式导入失败: {e}")
+        self._register_routes()
+        
         logger.info(f"API Server 初始化完成: {host}:{port}")
     
     def _register_routes(self):
@@ -176,6 +185,75 @@ class APIServer:
                 "name": "OpenCode API Server",
                 "version": "1.0.0",
                 "description": "OpenAI compatible API for OpenCode Smart Model Selector"
+            })
+    
+    def _register_v3_routes(self):
+        """注册 V3 工厂模式路由"""
+        from selector_factory import SelectorFactory
+        
+        @self.app.route("/v3/chat/completions", methods=["POST"])
+        def v3_chat_completions():
+            try:
+                platform = request.headers.get("X-Platform") or request.args.get("platform", "openclaw")
+                adapter = SelectorFactory.get_adapter(platform)
+                core = SelectorFactory.get_core()
+                
+                data = request.get_json()
+                if not data:
+                    return jsonify({"error": {"message": "Request body is required"}}), 400
+                
+                parsed = adapter.parse_chat_request(data)
+                
+                if parsed.get("model") in ["auto", "smart-select"]:
+                    model_id, reason = core.select(parsed["task_description"])
+                else:
+                    model_id = parsed["model"]
+                    reason = "用户指定"
+                
+                logger.info(f"[V3/{platform}] 选择: {model_id} - {reason}")
+                
+                return jsonify({
+                    "model": model_id,
+                    "reason": reason,
+                    "platform": platform
+                })
+                
+            except ValueError as e:
+                logger.warning(f"[V3] 平台未注册: {e}")
+                return jsonify({"error": {"message": str(e), "fallback": True}}), 400
+            except Exception as e:
+                logger.error(f"[V3] Error: {e}")
+                return jsonify({"error": {"message": str(e)}}), 500
+        
+        @self.app.route("/v3/models", methods=["GET"])
+        def v3_list_models():
+            try:
+                core = SelectorFactory.get_core()
+                models = core.get_models()
+                
+                data = []
+                for model_id, info in models.items():
+                    data.append({
+                        "id": model_id,
+                        "object": "model",
+                        "created": 1700000000,
+                        "owned_by": info["provider"],
+                        "provider": info["provider"],
+                        "capabilities": info["capabilities"]
+                    })
+                
+                return jsonify({"object": "list", "data": data})
+                
+            except Exception as e:
+                logger.error(f"[V3] Error: {e}")
+                return jsonify({"error": {"message": str(e)}}), 500
+        
+        @self.app.route("/v3/health", methods=["GET"])
+        def v3_health():
+            return jsonify({
+                "status": "ok",
+                "service": "Smart Model Selector V3",
+                "platforms": SelectorFactory.list_platforms()
             })
     
     def _build_task_description(self, messages: list) -> str:
