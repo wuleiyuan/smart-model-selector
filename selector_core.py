@@ -53,6 +53,7 @@ class ModelCapability(Enum):
     MULTIMODAL = "multimodal"
     BALANCED = "balanced"
     LONG_CONTEXT = "long_context"
+    PREMIUM = "premium"
 
 
 @dataclass
@@ -92,13 +93,59 @@ class ModelScore:
 # ============ 模型注册表 ============
 
 class ModelRegistry:
-    """模型注册表"""
+    """模型注册表 - 支持从配置文件加载"""
+    
+    # 配置文件路径
+    CONFIG_FILE = Path(__file__).parent / "models_config.json"
     
     def __init__(self):
         self._models: Dict[str, ModelInfo] = {}
+        self._settings: Dict[str, Any] = {}
+        self._load_from_config()
+    
+    def _load_from_config(self):
+        """从配置文件加载模型"""
+        try:
+            if self.CONFIG_FILE.exists():
+                with open(self.CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                self._settings = config.get("settings", {})
+                models_data = config.get("models", {})
+                
+                for model_id, model_data in models_data.items():
+                    if not model_data.get("enabled", True):
+                        continue
+                    
+                    # 解析 capabilities
+                    capabilities = []
+                    for cap_str in model_data.get("capabilities", []):
+                        try:
+                            capabilities.append(ModelCapability(cap_str))
+                        except ValueError:
+                            logger.warning(f"[ModelRegistry] 未知能力标签: {cap_str}")
+                    
+                    model_info = ModelInfo(
+                        id=model_data.get("id", model_id),
+                        name=model_data.get("name", model_id),
+                        provider=model_data.get("provider", "unknown"),
+                        capabilities=capabilities,
+                        context_window=model_data.get("context_window", 128000),
+                        cost_per_1k_input=model_data.get("cost_per_1k_input", 0.0),
+                        cost_per_1k_output=model_data.get("cost_per_1k_output", 0.0),
+                        latency_tier=model_data.get("latency_tier", "fast"),
+                    )
+                    self._models[model_id] = model_info
+                
+                logger.info(f"[ModelRegistry] 从配置文件加载了 {len(self._models)} 个模型")
+                return
+        except Exception as e:
+            logger.warning(f"[ModelRegistry] 加载配置文件失败: {e}")
+        
+        # 配置文件加载失败时使用默认模型
         self._register_default_models()
     
     def _register_default_models(self):
+        """注册默认模型（配置文件加载失败时的后备）"""
         models = [
             ModelInfo("claude-opus-4-6", "Claude Opus 4.6", "anthropic",
                      [ModelCapability.RESEARCH, ModelCapability.WRITING, ModelCapability.LONG_CONTEXT],
@@ -133,6 +180,7 @@ class ModelRegistry:
         ]
         for m in models:
             self._models[m.id] = m
+        logger.info(f"[ModelRegistry] 使用默认模型列表 ({len(self._models)} 个)")
     
     def get_model(self, model_id: str) -> Optional[ModelInfo]:
         return self._models.get(model_id)
@@ -182,7 +230,7 @@ class PerformanceMonitor:
     CACHE_FILE = Path.home() / ".config" / "smart_selector" / "performance.json"
     
     def __init__(self):
-        self._data: Dict[str, Dict] = {}
+        self._data: Dict[str, Dict[str, Any]] = {}
         self._load_cache()
     
     def _load_cache(self):
@@ -328,7 +376,7 @@ class SelectorCore:
     def record_result(self, model_id: str, latency: float, success: bool):
         self.monitor.record(model_id, latency, success)
     
-    def get_models(self) -> Dict[str, Dict]:
+    def get_models(self) -> Dict[str, Dict[str, Any]]:
         result = {}
         for mid, m in self.registry.list_models().items():
             result[mid] = {
