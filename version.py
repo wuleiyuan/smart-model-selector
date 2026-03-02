@@ -7,7 +7,7 @@ OpenCode Smart Model Selector 版本管理模块
 - PATCH: 向后兼容的 bug 修复
 """
 
-__version__ = "3.1.0"
+__version__ = "4.0.0"
 __author__ = "OpenCode Team"
 __description__ = "智能模型调度系统"
 
@@ -56,7 +56,27 @@ VERSION_HISTORY = {
         - 零代码添加模型 - 只需编辑 JSON 配置文件
         - 向后兼容 - 配置文件加载失败时自动回退
         - 新增 PREMIUM 能力标签
+    "3.1.0": {
+        "date": "2026-03-02",
+        "description": """配置驱动架构升级:
+        - models_config.json - 模型配置文件 (JSON)
+        - selector_core.py - 支持从配置文件动态加载模型
+        - 零代码添加模型 - 只需编辑 JSON 配置文件
+        - 向后兼容 - 配置文件加载失败时自动回退
+        - 新增 PREMIUM 能力标签
         """
+    },
+    "4.0.0": {
+        "date": "2026-03-02",
+        "description": """V2.0 增强期 - YAML配置+埋点+动态降级:
+        - config.yaml - YAML 配置文件
+        - config_loader.py - 配置加载器
+        - telemetry.py - 性能埋点收集
+        - fallback_strategy.py - 动态降级策略
+        - 7天性能数据保留
+        """
+    }
+}
     }
 }
         "date": "2026-03-01",
