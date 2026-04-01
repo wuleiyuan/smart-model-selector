@@ -1,0 +1,219 @@
+# Smart Model Selector V2.0 配置文件
+# YAML 格式配置，支持零代码修改
+
+version: "2.0.0"
+last_updated: "2026-03-02"
+
+# ============ 模型配置 ============
+models:
+  # Anthropic 系列
+  claude-opus-4-6:
+    name: "Claude Opus 4.6"
+    provider: "anthropic"
+    capabilities: ["research", "writing", "long_context"]
+    context_window: 200000
+    cost_per_1k_input: 15.0
+    cost_per_1k_output: 75.0
+    latency_tier: "medium"
+    enabled: true
+    priority: 80
+    
+  claude-sonnet-4-5:
+    name: "Claude Sonnet 4.5"
+    provider: "anthropic"
+    capabilities: ["coding", "balanced"]
+    context_window: 200000
+    cost_per_1k_input: 3.0
+    cost_per_1k_output: 15.0
+    latency_tier: "fast"
+    enabled: true
+    priority: 90
+    
+  claude-haiku-3-5:
+    name: "Claude Haiku 3.5"
+    provider: "anthropic"
+    capabilities: ["fast", "cheap"]
+    context_window: 200000
+    cost_per_1k_input: 0.8
+    cost_per_1k_output: 4.0
+    latency_tier: "fast"
+    enabled: true
+    priority: 70
+
+  # Google 系列
+  gemini-2-0-pro:
+    name: "Gemini 2.0 Pro"
+    provider: "google"
+    capabilities: ["research", "multimodal", "long_context"]
+    context_window: 2000000
+    cost_per_1k_input: 1.25
+    cost_per_1k_output: 5.0
+    latency_tier: "medium"
+    enabled: true
+    priority: 85
+    
+  gemini-2-0-flash:
+    name: "Gemini 2.0 Flash"
+    provider: "google"
+    capabilities: ["fast", "coding", "cheap"]
+    context_window: 1000000
+    cost_per_1k_input: 0.0
+    cost_per_1k_output: 0.0
+    latency_tier: "fast"
+    enabled: true
+    priority: 100
+
+  # OpenAI 系列
+  gpt-4o:
+    name: "GPT-4o"
+    provider: "openai"
+    capabilities: ["coding", "balanced"]
+    context_window: 128000
+    cost_per_1k_input: 2.5
+    cost_per_1k_output: 10.0
+    latency_tier: "fast"
+    enabled: true
+    priority: 88
+    
+  gpt-4o-mini:
+    name: "GPT-4o Mini"
+    provider: "openai"
+    capabilities: ["fast", "cheap"]
+    context_window: 128000
+    cost_per_1k_input: 0.15
+    cost_per_1k_output: 0.6
+    latency_tier: "fast"
+    enabled: true
+    priority: 75
+
+  # 开源/免费模型
+  deepseek-chat:
+    name: "DeepSeek Chat"
+    provider: "deepseek"
+    capabilities: ["coding", "cheap"]
+    context_window: 64000
+    cost_per_1k_input: 0.14
+    cost_per_1k_output: 0.28
+    latency_tier: "fast"
+    enabled: true
+    priority: 95
+    
+  qwen-2-5-coder-32b:
+    name: "Qwen 2.5 Coder 32B"
+    provider: "qwen"
+    capabilities: ["coding", "cheap"]
+    context_window: 32000
+    cost_per_1k_input: 0.0
+    cost_per_1k_output: 0.0
+    latency_tier: "fast"
+    enabled: true
+    priority: 98
+
+  minimax-2.5-free:
+    name: "MiniMax 2.5 (Free)"
+    provider: "opencode"
+    capabilities: ["fast", "cheap"]
+    context_window: 128000
+    cost_per_1k_input: 0.0
+    cost_per_1k_output: 0.0
+    latency_tier: "fast"
+    enabled: true
+    priority: 100
+
+# ============ 任务映射配置 ============
+task_mappings:
+  coding:
+    - deepseek-chat
+    - claude-sonnet-4-5
+    - gpt-4o
+    - qwen-2-5-coder-32b
+    - gemini-2-0-flash
+    
+  research:
+    - claude-opus-4-6
+    - gemini-2-0-pro
+    - gpt-4o
+    
+  writing:
+    - claude-haiku-3-5
+    - gpt-4o-mini
+    - gemini-2-0-flash
+    
+  fast:
+    - minimax-2.5-free
+    - gemini-2-0-flash
+    - deepseek-chat
+    
+  multimodal:
+    - gemini-2-0-pro
+    - gemini-2-0-flash
+
+# ============ 降级策略配置 ============
+fallback:
+  # 默认降级顺序
+  default:
+    - minimax-2.5-free
+    - gemini-2-0-flash
+    - deepseek-chat
+    
+  # 编程任务降级
+  coding:
+    - deepseek-chat
+    - qwen-2-5-coder-32b
+    - gemini-2-0-flash
+    
+  # 研究任务降级
+  research:
+    - gemini-2-0-pro
+    - claude-opus-4-6
+
+# ============ 全局设置 ============
+settings:
+  # 冷却阈值：连续失败多少次后进入冷却
+  cooldown_threshold: 3
+  
+  # 缓存 TTL (秒)
+  cache_ttl_seconds: 14400
+  
+  # 是否启用降级
+  enable_fallback: true
+  
+  # 是否优先使用免费模型
+  prefer_free: true
+  
+  # 默认任务类型
+  default_task_type: "balanced"
+  
+  # 性能追踪开关
+  enable_performance_tracking: true
+  
+  # 性能数据保留天数
+  performance_retention_days: 7
+
+# ============ 平台适配器配置 ============
+adapters:
+  opencode:
+    enabled: true
+    priority: 1
+    
+  openclaw:
+    enabled: true
+    priority: 2
+
+# ============ 性能埋点配置 ============
+telemetry:
+  # 是否启用埋点
+  enabled: true
+  
+  # 埋点端点 (可选，用于上报到外部系统)
+  endpoint: null
+  
+  # 本地日志级别
+  log_level: "INFO"
+  
+  # 记录内容
+  record:
+    - model_selection    # 模型选择决策
+    - latency           # 延迟数据
+    - errors            # 错误信息
+    - cost              # 成本估算

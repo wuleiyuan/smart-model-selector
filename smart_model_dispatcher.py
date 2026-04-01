@@ -58,6 +58,27 @@ class TimeoutTracker:
                         self._history = {}
                         return
                     
+                    # [核心修复] 真正将磁盘数据加载到内存中，激活热启动
+                    self._history = data.get("history", {})
+                    
+                    logger.info(f"[OK] 加载测速缓存: {len(self._history)} 个 provider (缓存 {cache_age // 60} 分钟有效)")
+        except Exception as e:
+            logger.debug(f"测速缓存加载失败: {e}")
+        """从磁盘加载历史测速数据"""
+        try:
+            if self.CACHE_FILE.exists():
+                with open(self.CACHE_FILE, 'r') as f:
+                    data = json.load(f)
+                    # 检查缓存是否过期（超过4小时）
+                    cache_time = data.get("updated_at", 0)
+                    current_time = int(time.time())
+                    cache_age = current_time - cache_time
+                    
+                    if cache_age > 4 * 3600:  # 4小时 = 14400秒
+                        logger.info(f"⏰ 测速缓存已过期 ({cache_age // 3600}h)，重新探测")
+                        self._history = {}
+                        return
+                    
                     logger.info(f"[OK] 加载测速缓存: {len(self._history)} 个 provider (缓存 {cache_age // 60} 分钟有效)")
                 cache_time = data.get("updated_at", 0)
                 current_time = int(time.time())

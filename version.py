@@ -7,7 +7,7 @@ OpenCode Smart Model Selector 版本管理模块
 - PATCH: 向后兼容的 bug 修复
 """
 
-__version__ = "2.2.0"
+__version__ = "4.0.1"
 __author__ = "OpenCode Team"
 __description__ = "智能模型调度系统"
 
@@ -19,35 +19,31 @@ VERSION_HISTORY = {
     },
     "2.0.0": {
         "date": "2025-02-25", 
-        "description": """
-        重大更新:
-        - 手动指定模型 > 自动推荐优先级 (24h TTL, 连续3次失败自动切换)
-        - 添加 op auto/reset 命令恢复智能模式
-        - 长文本降级策略 (>8000 tokens 自动用免费模型)
-        - 测速记忆持久化 (latency_cache.json 热启动)
-        - JSON 配置容错机制 (自动备份回退)
-        - Bash 兼容 (auto_start.sh 支持 PROMPT_COMMAND)
-        - 版本管理模块 (version.py)
+        "description": "重大更新: 手动指定模型 > 自动推荐优先级, 24h TTL, 连续3次失败自动切换, op auto/reset 命令, 长文本降级策略, 测速记忆持久化"
     },
     "2.1.0": {
         "date": "2026-02-26",
-        "description": """
-        新增功能:
-        - API Server 模块 (api_server.py) - OpenAI 兼容接口
-        - 新增 op api start/stop/restart 命令
-        - 支持作为 Openclaw 模型供应商
-        - 支持 /v1/chat/completions 和 /v1/models 端点
+        "description": "新增功能: API Server 模块 (OpenAI 兼容接口), op api 命令"
     },
     "2.2.0": {
         "date": "2026-02-27",
-        "description": """
-        新增功能:
-        - 双引擎架构 (dual_engine.py) - 自定义 + 原生冗余
-        - 熔断降级机制 - 连续3次失败自动切换
-        - API Server 并发优化 - gunicorn 支持
-        - 测速缓存生命周期 - 4小时后自动刷新
-        - op engine 命令 - 手动切换引擎
-        """
+        "description": "新增功能: 双引擎架构, 熔断降级, 并发优化, 测速缓存4h过期, op engine 命令"
+    },
+    "3.0.0": {
+        "date": "2026-03-01",
+        "description": "架构升级: 通用核心 + 适配器模式, 六边形架构"
+    },
+    "3.1.0": {
+        "date": "2026-03-02",
+        "description": "配置驱动: models_config.json, 零代码添加模型"
+    },
+    "4.0.0": {
+        "date": "2026-03-02",
+        "description": "V2.0增强期: YAML配置+性能埋点+动态降级"
+    },
+    "4.0.1": {
+        "date": "2026-03-02",
+        "description": "Bug 修复: 代码重构优化"
     }
 }
 
@@ -71,9 +67,7 @@ def print_version():
     print()
     print("版本历史:")
     for ver, info in VERSION_HISTORY.items():
-        print(f"  v{ver} ({info['date']})")
-        for line in info['description'].strip().split('\n'):
-            print(f"    {line.strip()}")
+        print(f"  v{ver} ({info['date']}) - {info['description']}")
 
 if __name__ == "__main__":
     print_version()

@@ -24,6 +24,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from smart_model_dispatcher import SmartModelDispatcher
 from model_selector import SmartModelSelector
+# OpenClaw 整合模块
+from openclaw_selector import OpenClawModelSelector, PerformanceTracker
 
 # 配置日志
 logging.basicConfig(
@@ -34,7 +36,8 @@ logger = logging.getLogger("api_server")
 
 # 尝试导入 Flask
 try:
-    from flask import Flask, request, jsonify
+    from flask import Flask, request, jsonify, Response, stream_with_context
+    import time
     FLASK_AVAILABLE = True
 except ImportError:
     FLASK_AVAILABLE = False
@@ -52,8 +55,20 @@ class APIServer:
         # 初始化调度器
         self.dispatcher = SmartModelDispatcher()
         self.model_selector = SmartModelSelector()
+        # OpenClaw 整合
+        self.openclaw_selector = OpenClawModelSelector()
+        self.performance_tracker = PerformanceTracker()
         
         # 注册路由
+        self._register_routes()
+        
+        # 注册 V3 路由 (工厂模式)
+        try:
+            from selector_factory import SelectorFactory
+            self._register_v3_routes()
+            logger.info("[V3] 工厂模式路由注册完成")
+        except ImportError as e:
+            logger.warning(f"[V3] 工厂模式导入失败: {e}")
         self._register_routes()
         
         logger.info(f"API Server 初始化完成: {host}:{port}")
@@ -125,7 +140,11 @@ class APIServer:
                 # 选择模型
                 if model == "auto" or model == "smart-select":
                     # 智能选择
-                    selected_model, reason = self.model_selector.select(task_description)
+                    # OpenClaw 混合策略选择 (任务匹配 + 性能驱动)
+                    model_id, reason = self.openclaw_selector.select(task_description)
+                    provider = self._get_provider_from_model(model_id)
+                    logger.info(f"[OpenClaw] 智能选择: {model_id} ({provider}) - {reason}")
+                    # 原选择逻辑已由 OpenClaw 选择器替代
                     model_id = selected_model.id
                     provider = selected_model.provider
                     logger.info(f"智能选择: {model_id} ({provider}) - {reason}")
@@ -166,6 +185,75 @@ class APIServer:
                 "name": "OpenCode API Server",
                 "version": "1.0.0",
                 "description": "OpenAI compatible API for OpenCode Smart Model Selector"
+            })
+    
+    def _register_v3_routes(self):
+        """注册 V3 工厂模式路由"""
+        from selector_factory import SelectorFactory
+        
+        @self.app.route("/v3/chat/completions", methods=["POST"])
+        def v3_chat_completions():
+            try:
+                platform = request.headers.get("X-Platform") or request.args.get("platform", "openclaw")
+                adapter = SelectorFactory.get_adapter(platform)
+                core = SelectorFactory.get_core()
+                
+                data = request.get_json()
+                if not data:
+                    return jsonify({"error": {"message": "Request body is required"}}), 400
+                
+                parsed = adapter.parse_chat_request(data)
+                
+                if parsed.get("model") in ["auto", "smart-select"]:
+                    model_id, reason = core.select(parsed["task_description"])
+                else:
+                    model_id = parsed["model"]
+                    reason = "用户指定"
+                
+                logger.info(f"[V3/{platform}] 选择: {model_id} - {reason}")
+                
+                return jsonify({
+                    "model": model_id,
+                    "reason": reason,
+                    "platform": platform
+                })
+                
+            except ValueError as e:
+                logger.warning(f"[V3] 平台未注册: {e}")
+                return jsonify({"error": {"message": str(e), "fallback": True}}), 400
+            except Exception as e:
+                logger.error(f"[V3] Error: {e}")
+                return jsonify({"error": {"message": str(e)}}), 500
+        
+        @self.app.route("/v3/models", methods=["GET"])
+        def v3_list_models():
+            try:
+                core = SelectorFactory.get_core()
+                models = core.get_models()
+                
+                data = []
+                for model_id, info in models.items():
+                    data.append({
+                        "id": model_id,
+                        "object": "model",
+                        "created": 1700000000,
+                        "owned_by": info["provider"],
+                        "provider": info["provider"],
+                        "capabilities": info["capabilities"]
+                    })
+                
+                return jsonify({"object": "list", "data": data})
+                
+            except Exception as e:
+                logger.error(f"[V3] Error: {e}")
+                return jsonify({"error": {"message": str(e)}}), 500
+        
+        @self.app.route("/v3/health", methods=["GET"])
+        def v3_health():
+            return jsonify({
+                "status": "ok",
+                "service": "Smart Model Selector V3",
+                "platforms": SelectorFactory.list_platforms()
             })
     
     def _build_task_description(self, messages: list) -> str:
@@ -412,6 +500,33 @@ class APIServer:
         return jsonify(response)
     
     def _stream_response(self, response: Dict[str, Any], model: str):
+        """流式响应 (兼容 OpenAI SSE 协议)"""
+        def generate():
+            # 1. 提取上游同步返回的完整文本内容
+            try:
+                content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+            except Exception:
+                content = "⚠️ 模型未返回有效内容"
+
+            # 2. 模拟打字机效果的分块流式输出
+            chunk_size = 15  # 每次吐出的字符数
+            for i in range(0, len(content), chunk_size):
+                chunk = content[i:i+chunk_size]
+                data = {
+                    "id": f"chatcmpl-{int(time.time())}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": model,
+                    "choices": [{"index": 0, "delta": {"content": chunk}}]
+                }
+                # 遵循 Server-Sent Events (SSE) 格式规范
+                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+                time.sleep(0.01)  # 极短延迟模拟流式平滑输出
+
+            # 3. 发送结束标志
+            yield "data: [DONE]\n\n"
+
+        return Response(stream_with_context(generate()), content_type='text/event-stream')
         """流式响应（暂不支持）"""
         return jsonify({
             "error": {

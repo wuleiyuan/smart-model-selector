@@ -1,3 +1,32 @@
+# 🧠 Smart Model Selector
+
+[![Version](https://img.shields.io/badge/Version-v4.0.1-blue.svg)](https://github.com/wuleiyuan/smart-model-selector/releases)
+[![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/wuleiyuan/smart-model-selector?style=social)](https://github.com/wuleiyuan/smart-model-selector/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/wuleiyuan/smart-model-selector/main.svg)](https://github.com/wuleiyuan/smart-model-selector/commits/main)
+
+> 🇨🇳 中文 | [English](./README_EN.md)
+
+**智能模型选择系统** - 兼容 OpenCode / OpenClaw 的 AI 模型自动选择工具，**支持多个免费 API 智能轮换**，无需付费即可享受最优 AI 模型体验。
+
+> 🤖 AI 模型路由 | ⚡ API 负载均衡 | 🛡️ 自动故障转移 | 💰 成本优化 | 🔄 OpenCode/OpenClaw/Cursor 多平台支持
+
+**关键字**: AI, LLM, Model Router, API Gateway, Load Balancer, Claude, GPT, Gemini, DeepSeek, Qwen, OpenCode, OpenClaw, Cursor, Smart Selector, Token Optimization, API Failover, Multi-Provider, Model Selection, AI Coding Assistant
+
+## ✨ 核心特性
+
+| 特性 | 说明 |
+|------|------|
+| 🤖 **智能路由** | 根据任务类型自动选择最优模型 (Coding/Research/Fast) |
+| ⚡ **负载均衡** | 多 API Key 轮询，避免单点限流 |
+| 🛡️ **故障转移** | API 故障自动切换，用户无感知 |
+| 💰 **成本优化** | 长文本自动降级，免费模型优先 |
+| 🆓 **免费 API 轮换** | 多个免费 API 智能轮换，自动选择最优 |
+| 🔀 **多 Provider 支持** | Google/Anthropic/OpenAI/DeepSeek 自由切换 |
+| ⏰ **智能 TTL** | 手动指定模型 24h 过期，自动恢复智能模式 |
+| 🔄 **热启动** | 测速记忆持久化，重启后无需重新探测网络 |
+| 🖥️ **多 Shell 支持** | 支持 Zsh 和 Bash 自动启动 |
 # 🧠 OpenCode Smart Model Selector
 
 [![Version](https://img.shields.io/badge/Version-v2.2.0-blue.svg)](https://github.com/wuleiyuan/opencode-smart-model-selector/releases)
@@ -84,7 +113,22 @@ op -cn             # 中文模式 (硅基流动/MiniMax)
 - **24h 过期**: 手动指定的模型 24 小时后自动失效，恢复智能模式
 - **连续失败**: 连续 3 次调用失败后自动清除，恢复智能模式
 
-## 📊 支持的模型
+RV|## 🆓 支持的免费模型
+
+| Provider | 模型 | 特点 | 价格 |
+|----------|------|------|------|
+| Google Gemini | 2.0 Flash | 高性能、多模态 | 🆓 免费 |
+| DeepSeek | Chat | 编程能力强 | 🆓 免费 |
+| SiliconFlow | Qwen/DeepSeek | 免费额度多 | 🆓 免费 |
+| MiniMax | Chat | 中文优化 | 🆓 免费 |
+
+## 💎 付费模型 (可选)
+
+| Provider | 模型 | 特点 |
+|----------|------|------|
+| Anthropic Claude | 3.5/3.7 Sonnet | 编程王者、推理专家 |
+| OpenAI | GPT-4o | 均衡全能 |
+| Google Gemini | 2.0 Pro | 高性能、长上下文 |
 
 | Provider | 模型 | 特点 |
 |----------|------|------|
@@ -162,7 +206,22 @@ pip install -r requirements.txt
 
 # 启动 API Server
 op api start
-# 或
+ZV|# 或
+QK|python api_server.py --port 8080
+NM|
+NP|### 生产环境高并发启动 (推荐)
+
+```bash
+# 安装 gunicorn 和 gevent
+pip install gunicorn gevent
+
+# -w 4: 启动 4 个工作进程
+# -k gevent: 使用异步协程模式处理百万级 I/O
+# -b 0.0.0.0:8080: 绑定端口
+gunicorn -w 4 -k gevent -b 0.0.0.0:8080 api_server:app
+```
+
+**注意**: 需提前执行 `pip install gunicorn gevent`
 python api_server.py --port 8080
 ```
 

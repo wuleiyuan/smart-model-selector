@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "opencode-smart-model-selector"
-version = "2.1.0"
+name = "smart-model-selector"
+version = "4.0.1"
 description = "OpenCode Smart Model Selector - AI model routing system with load balancing and failover"
 readme = "README.md"
 license = {text = "MIT"}

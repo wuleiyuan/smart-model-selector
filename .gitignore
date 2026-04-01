@@ -26,3 +26,13 @@ build/
 # 临时文件
 *.log
 *.tmp
+
+# 开发记忆 (本地使用)
+.workflow记忆.md
+
+# 隐私文件 (不同步到 GitHub)
+keys.json
+api_config.json
+auth.json
+*.key
+credentials.json

@@ -1,20 +1,25 @@
-# 🧠 OpenCode Smart Model Selector
+JT|# 🧠 Smart Model Selector
 
-[![Version](https://img.shields.io/badge/Version-v2.1.0-blue.svg)](https://github.com/wuleiyuan/opencode-smart-model-selector/releases)
+[![Version](https://img.shields.io/badge/Version-v4.0.1-blue.svg)](https://github.com/wuleiyuan/smart-model-selector/releases)
 [![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/wuleiyuan/opencode-smart-model-selector?style=social)](https://github.com/wuleiyuan/opencode-smart-model-selector/stargazers)
-[![Last Commit](https://img.shields.io/github/last-commit/wuleiyuan/opencode-smart-model-selector/main.svg)](https://github.com/wuleiyuan/opencode-smart-model-selector/commits/main)
+[![Stars](https://img.shields.io/github/stars/wuleiyuan/smart-model-selector?style=social)](https://github.com/wuleiyuan/smart-model-selector/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/wuleiyuan/smart-model-selector/main.svg)](https://github.com/wuleiyuan/smart-model-selector/commits/main)
 
 > English | [中文](./README.md)
 
-**OpenCode Smart Model Selector** - Automatically selects the optimal AI model based on task type, supports multi-provider load balancing, automatic failover, and cost optimization.
+ZB|MW|**Smart Model Selector** - AI model auto-selection tool compatible with OpenCode, OpenClaw, and Cursor. **Supports multiple free API rotation**, no payment required to enjoy the best AI model experience.
 
 ## ✨ Core Features
 
-| Feature | Description |
+RJ|**Keywords**: AI, LLM, Model Router, API Gateway, Load Balancer, Claude, GPT, Gemini, DeepSeek, Qwen, OpenCode, OpenClaw, Cursor, Smart Selector, Token Optimization, API Failover, Multi-Provider, Model Selection, AI Coding Assistant
 |---------|-------------|
-| 🤖 **Smart Routing** | Auto-select optimal model based on task type (Coding/Research/Fast) |
+NX|| 🤖 **Smart Routing** | Auto-select optimal model based on task type (Coding/Research/Fast) |
+KM|| ⚡ **Load Balancing** | Multiple API keys rotation, prevents rate limits |
+KV|| 🛡️ **Failover** | Automatic API failover, seamless for users |
+NT|| 🆓 **Free API Rotation** | Multiple free APIs smart rotation, auto-select best |
+MY|| 💰 **Cost Optimization** | Long text auto-downgrade, free models prioritized |
+RP|| ⏱️ **Speed Test** | Latency-based routing, remembers response times |
 | ⚡ **Load Balancing** | Multiple API keys rotation, prevents rate limits |
 | 🛡️ **Failover** | Automatic API failover, seamless for users |
 | 💰 **Cost Optimization** | Long text auto-downgrade, free models prioritized |
@@ -26,8 +31,8 @@
 ### Installation
 
 ```bash
-git clone https://github.com/wuleiyuan/opencode-smart-model-selector.git
-cd opencode-smart-model-selector
+git clone https://github.com/wuleiyuan/smart-model-selector.git
+cd smart-model-selector
 chmod +x install.sh
 ./install.sh
 ```
@@ -100,7 +105,22 @@ Manual Spec (op set) > Auto Analyze > Manual Mode > Smart Reset
 - **24h Expiry**: Manual spec expires after 24 hours
 - **3 Failures**: Auto-clears after 3 consecutive failures
 
-## 📊 Supported Models
+SH|## 🆓 Supported Free Models
+
+| Provider | Models | Features | Price |
+|----------|--------|----------|-------|
+| Google Gemini | 2.0 Flash | High performance, multimodal | 🆓 Free |
+| DeepSeek | Chat | Strong coding ability | 🆓 Free |
+| SiliconFlow | Qwen/DeepSeek | Free credits | 🆓 Free |
+| MiniMax | Chat | Chinese optimization | 🆓 Free |
+
+## 💎 Premium Models (Optional)
+
+| Provider | Models | Features |
+|----------|--------|----------|
+| Anthropic Claude | 3.5/3.7 Sonnet | Coding king, reasoning expert |
+| OpenAI | GPT-4o | Balanced |
+| Google Gemini | 2.0 Pro | High performance, long context |
 
 | Provider | Models | Features |
 |----------|--------|----------|
