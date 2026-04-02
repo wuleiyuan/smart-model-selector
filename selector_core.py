@@ -198,11 +198,11 @@ class TaskAnalyzer:
     """任务分析器"""
     
     TASK_PATTERNS = {
-        TaskType.CODING: [r"\b(code|编程|写代码|debug|bug|修复|函数|算法)\b"],
-        TaskType.RESEARCH: [r"\b(分析|研究|调研|比较|评估|总结|解释)\b"],
-        TaskType.WRITING: [r"\b(写|创作|编辑|修改|润色|翻译|总结)\b"],
-        TaskType.FAST: [r"\b(快速|简单|短|立即)\b"],
-        TaskType.MULTIMODAL: [r"\b(图片|图像|图表|截图|照片)\b"],
+        TaskType.CODING: [r"(code|编程|写代码|debug|bug|修复|函数|算法)"],
+        TaskType.RESEARCH: [r"(分析|研究|调研|比较|评估|总结|解释)"],
+        TaskType.WRITING: [r"(写|创作|编辑|修改|润色|翻译|总结)"],
+        TaskType.FAST: [r"(快速|简单|短|立即)"],
+        TaskType.MULTIMODAL: [r"(图片|图像|图表|截图|照片)"],
     }
     
     def analyze(self, description: str) -> TaskType:

@@ -278,7 +278,7 @@ class SmartModelDispatcher:
         self.api_keys: List[APIKey] = []
         self._routing_config: Dict[ModelProfile, List[str]] = {
             ModelProfile.RESEARCH: ["google"],
-            ModelProfile.CODING: ["anthropic", "siliconflow"],
+            ModelProfile.CODING: ["anthropic", "siliconflow", "google"],
             ModelProfile.CRAWLER: ["deepseek", "minimax"],
             ModelProfile.FAST: ["siliconflow", "deepseek", "google"],  # 多个免费 provider
             ModelProfile.CN: ["siliconflow", "minimax"]

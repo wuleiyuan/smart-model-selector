@@ -7,7 +7,7 @@ OpenCode Smart Model Selector 版本管理模块
 - PATCH: 向后兼容的 bug 修复
 """
 
-__version__ = "4.0.1"
+__version__ = "4.1.0"
 __author__ = "OpenCode Team"
 __description__ = "智能模型调度系统"
 
@@ -44,6 +44,10 @@ VERSION_HISTORY = {
     "4.0.1": {
         "date": "2026-03-02",
         "description": "Bug 修复: 代码重构优化"
+    },
+    "4.1.0": {
+        "date": "2026-04-02",
+        "description": "架构重构: 物理级双引擎分配与意图直达"
     }
 }
 

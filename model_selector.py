@@ -2,64 +2,74 @@
 import json
 import os
 import sys
+from pathlib import Path
 
 BASE_DIR = "/Users/leiyuanwu/LocalProjects/OpenCode/smart-model-selector"
+CONFIG_FILE = os.path.join(BASE_DIR, "models_config.json")
 KEYS_FILE = os.path.join(BASE_DIR, "keys.json")
 STATE_FILE = os.path.join(BASE_DIR, ".selector_state.json")
+AUTH_FILE = Path.home() / ".local/share/opencode/auth.json"
 
 def main():
     try:
-        # 1. 读取状态
-        state = {"p_idx": 0}
-        if os.path.exists(STATE_FILE):
-            try:
-                with open(STATE_FILE, 'r') as f:
-                    state = json.load(f)
-            except:
-                pass
-                
-        # 2. 读取 Keys
-        with open(KEYS_FILE, 'r') as f:
-            keys = json.load(f)
+        task_desc = sys.argv[1] if len(sys.argv) > 1 else "coding"
+        
+        # 1. 意图直达：抛弃黑盒大脑，直接提取任务类型
+        task_type = "coding"
+        if any(w in task_desc for w in ["写", "推文", "公众号", "文案", "文章", "编剧"]):
+            task_type = "writing"
             
-        # 3. 核心轮询逻辑：优先用 3 个付费 Google
-        paid_google_keys = keys.get("google_paid", [])
-        if paid_google_keys:
-            idx = state.get("p_idx", 0) % len(paid_google_keys)
-            
-            # 保存下次的索引
-            state["p_idx"] = idx + 1
-            with open(STATE_FILE, 'w') as f:
-                json.dump(state, f)
-                
-            # 组装返回给 OpenCode 的 JSON
-            res = {
-                "model": "google/gemini-3-pro-preview", 
-                "provider": "openai", # 依然走龙虾隧道
-                "name": f"Gemini 3 Pro (Paid-Slot-{idx+1})",
-                "reason": "🎯 旗舰算力调度成功"
-            }
-        else:
-            # 兜底
-            res = {
-                "model": "gemini-1.5-flash", 
-                "provider": "google", 
-                "name": "Fallback Free"
-            }
-            
-    except Exception as e:
-        # 终极兜底：即便出错也不能让 OpenCode 崩溃
-        res = {
-            "model": "gemini-1.5-flash", 
-            "provider": "google", 
-            "name": f"Error: {str(e)}"
-        }
+        # 2. 强行读取配置基因库 (拿走对应任务的第一顺位)
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+        
+        model_id = config.get("task_mappings", {}).get(task_type, ["gemini-3.1-pro-preview"])[0]
 
-    # 4. 输出给 OpenCode
-    if "--json" in sys.argv:
-        print(json.dumps(res))
-    else:
-        print(f"\n🚀 当前挂载: {res.get('name')}")
+        # 3. 双引擎物理级分配
+        current_key = ""
+        provider = "google"
+        
+        if "minimax" in model_id.lower():
+            provider = "minimax"
+            if os.path.exists(AUTH_FILE):
+                with open(AUTH_FILE, 'r') as f:
+                    current_key = json.load(f).get("minimax_api_key", "")
+            reason = "2号编剧接管"
+        else:
+            model_id = "gemini-3.1-pro-preview" 
+            if os.path.exists(KEYS_FILE):
+                with open(KEYS_FILE, 'r') as f:
+                    data = json.load(f)
+                local_keys = data.get("google_paid", []) + data.get("google_free", [])
+                
+                state = {"idx": 0}
+                if os.path.exists(STATE_FILE):
+                    try:
+                        with open(STATE_FILE, 'r') as f: state = json.load(f)
+                    except: pass
+                if local_keys:
+                    current_idx = state.get("idx", 0) % len(local_keys)
+                    current_key = local_keys[current_idx]
+                    state["idx"] = current_idx + 1
+                    with open(STATE_FILE, 'w') as f: json.dump(state, f)
+            reason = "3.1 Pro 护航"
+
+        res = {
+            "api_key": current_key,
+            "model": model_id,
+            "provider": provider,
+            "name": f"🛡️ 赛博工厂 ({reason})"
+        }
+        print(json.dumps(res, ensure_ascii=False))
+        
+    except Exception as e:
+        res = {
+            "api_key": "YOUR_BACKUP_KEY",
+            "model": "gemini-3.1-pro-preview",
+            "provider": "google",
+            "name": f"⚠️ 紧急降级: {str(e)}"
+        }
+        print(json.dumps(res, ensure_ascii=False))
 
 if __name__ == "__main__":
     main()

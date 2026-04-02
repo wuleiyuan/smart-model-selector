@@ -16,8 +16,8 @@ while [ -L "$SCRIPT_SOURCE" ]; do
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
 
-# 默认模型（fallback）- 使用最通用的 gemini-1.5-flash
-DEFAULT_MODEL="gemini-1.5-flash"
+# 默认模型（fallback）- 使用最通用的 gemini-3.1-pro-preview
+DEFAULT_MODEL="gemini-3.1-pro-preview"
 
 # 获取任务描述
 TASK="$*"
