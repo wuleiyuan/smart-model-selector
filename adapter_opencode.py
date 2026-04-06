@@ -95,7 +95,7 @@ class OpenCodeAdapter(BaseCLIAdapter):
             错误响应
         """
         return {
-            "model": "minimax-2.5-free",  # 错误时使用默认模型
+            "model": "gemini-3.1-pro-preview",  # 错误时使用默认模型
             "reason": f"选择失败: {str(error)}",
             "success": False,
             "error": str(error)
@@ -199,8 +199,8 @@ def main():
     
     args = parser.parse_args()
     
-    # 导入核心模块
-    sys.path.insert(0, "/Users/leiyuanwu/GitHub/opencode-smart-model-selector")
+SCRIPT_DIR = Path(__file__).parent
+sys.path.insert(0, str(SCRIPT_DIR))
     from selector_core import SelectorCore
     
     # 初始化

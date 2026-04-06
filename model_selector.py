@@ -14,10 +14,19 @@ def main():
     try:
         task_desc = sys.argv[1] if len(sys.argv) > 1 else "coding"
         
-        # 1. 意图直达：抛弃黑盒大脑，直接提取任务类型
         task_type = "coding"
-        if any(w in task_desc for w in ["写", "推文", "公众号", "文案", "文章", "编剧"]):
+        
+        writing_keywords = ["写文章", "写文案", "写博客", "写公众号", "写小说", "写剧本", "编剧", "创作", "推文", "文章", "文案"]
+        if any(w in task_desc for w in writing_keywords):
             task_type = "writing"
+        
+        research_keywords = ["分析", "研究", "调研", "对比", "评估", "总结", "解释", "调查"]
+        if any(w in task_desc for w in research_keywords):
+            task_type = "research"
+            
+        fast_keywords = ["快速", "简单", "短", "立即", "轻微", "小修"]
+        if any(w in task_desc for w in fast_keywords):
+            task_type = "fast"
             
         # 2. 强行读取配置基因库 (拿走对应任务的第一顺位)
         with open(CONFIG_FILE, 'r') as f:

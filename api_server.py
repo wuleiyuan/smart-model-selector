@@ -1,587 +1,70 @@
 #!/usr/bin/env python3
-"""
-OpenCode Smart Model Selector - API Server
-提供 OpenAI 兼容的 HTTP API 接口，可作为 Openclaw 的模型供应商
-
-支持端点:
-- POST /v1/chat/completions - 聊天完成
-- GET  /v1/models - 获取可用模型列表
-- GET  /health - 健康检查
-"""
-
 import json
 import logging
 import sys
+import time
 from pathlib import Path
-from typing import Dict, Any, Optional
-import requests
+from flask import Flask, request, jsonify, Response, stream_with_context
 
-from typing import Dict, Any, Optional
-
-# 添加项目根目录到 Python 路径
-SCRIPT_DIR = Path(__file__).parent
-sys.path.insert(0, str(SCRIPT_DIR))
-
+# 导入你的核心调度器
 from smart_model_dispatcher import SmartModelDispatcher
-from model_selector import SmartModelSelector
-# OpenClaw 整合模块
-from openclaw_selector import OpenClawModelSelector, PerformanceTracker
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger("api_server")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("SmartGateway")
 
-# 尝试导入 Flask
-try:
-    from flask import Flask, request, jsonify, Response, stream_with_context
-    import time
-    FLASK_AVAILABLE = True
-except ImportError:
-    FLASK_AVAILABLE = False
-    logger.warning("Flask not installed. Install with: pip install flask")
+app = Flask(__name__)
+dispatcher = SmartModelDispatcher()
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok", "engine": "OpenCode-Smart-Failover"})
 
-class APIServer:
-    """OpenCode API Server - OpenAI 兼容接口"""
-    
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080):
-        self.host = host
-        self.port = port
-        self.app = Flask(__name__)
-        
-        # 初始化调度器
-        self.dispatcher = SmartModelDispatcher()
-        self.model_selector = SmartModelSelector()
-        # OpenClaw 整合
-        self.openclaw_selector = OpenClawModelSelector()
-        self.performance_tracker = PerformanceTracker()
-        
-        # 注册路由
-        self._register_routes()
-        
-        # 注册 V3 路由 (工厂模式)
-        try:
-            from selector_factory import SelectorFactory
-            self._register_v3_routes()
-            logger.info("[V3] 工厂模式路由注册完成")
-        except ImportError as e:
-            logger.warning(f"[V3] 工厂模式导入失败: {e}")
-        self._register_routes()
-        
-        logger.info(f"API Server 初始化完成: {host}:{port}")
-    
-    def _register_routes(self):
-        """注册 API 路由"""
-        
-        @self.app.route("/health", methods=["GET"])
-        def health():
-            """健康检查"""
-            return jsonify({"status": "ok", "service": "opencode-api-server"})
-        
-        @self.app.route("/v1/models", methods=["GET"])
-        def list_models():
-            """获取可用模型列表"""
-            models = []
-            for model_id, model in self.model_selector.MODELS.items():
-                if model.available:
-                    models.append({
-                        "id": model_id,
-                        "object": "model",
-                        "created": 1700000000,
-                        "owned_by": model.provider,
-                        "provider": model.provider
-                    })
-            
-            return jsonify({
-                "object": "list",
-                "data": models
-            })
-        
-        @self.app.route("/v1/chat/completions", methods=["POST"])
-        def chat_completions():
-            """聊天完成 - 核心接口"""
-            try:
-                data = request.get_json()
-                
-                if not data:
-                    return jsonify({
-                        "error": {
-                            "message": "Request body is required",
-                            "type": "invalid_request_error",
-                            "code": "missing_request_body"
-                        }
-                    }), 400
-                
-                # 提取消息
-                messages = data.get("messages", [])
-                if not messages:
-                    return jsonify({
-                        "error": {
-                            "message": "messages is required",
-                            "type": "invalid_request_error",
-                            "code": "missing_messages"
-                        }
-                    }), 400
-                
-                # 提取模型
-                model = data.get("model", "gemini-1.5-pro")
-                
-                # 提取其他参数
-                temperature = data.get("temperature", 0.7)
-                max_tokens = data.get("max_tokens", 4096)
-                stream = data.get("stream", False)
-                
-                # 构建任务描述
-                task_description = self._build_task_description(messages)
-                
-                # 选择模型
-                if model == "auto" or model == "smart-select":
-                    # 智能选择
-                    # OpenClaw 混合策略选择 (任务匹配 + 性能驱动)
-                    model_id, reason = self.openclaw_selector.select(task_description)
-                    provider = self._get_provider_from_model(model_id)
-                    logger.info(f"[OpenClaw] 智能选择: {model_id} ({provider}) - {reason}")
-                    # 原选择逻辑已由 OpenClaw 选择器替代
-                    model_id = selected_model.id
-                    provider = selected_model.provider
-                    logger.info(f"智能选择: {model_id} ({provider}) - {reason}")
-                else:
-                    # 指定模型
-                    model_id = model
-                    provider = self._get_provider_from_model(model)
-                
-                # 调用 API
-                response = self._call_api(
-                    provider=provider,
-                    model=model_id,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens
-                )
-                
-                if stream:
-                    return self._stream_response(response, model_id)
-                
-                # 构建响应
-                return self._build_response(response, model_id, messages)
-                
-            except Exception as e:
-                logger.error(f"Chat completions error: {e}")
-                return jsonify({
-                    "error": {
-                        "message": str(e),
-                        "type": "internal_error",
-                        "code": "internal_error"
-                    }
-                }), 500
-        
-        @self.app.route("/", methods=["GET"])
-        def root():
-            """根路径"""
-            return jsonify({
-                "name": "OpenCode API Server",
-                "version": "1.0.0",
-                "description": "OpenAI compatible API for OpenCode Smart Model Selector"
-            })
-    
-    def _register_v3_routes(self):
-        """注册 V3 工厂模式路由"""
-        from selector_factory import SelectorFactory
-        
-        @self.app.route("/v3/chat/completions", methods=["POST"])
-        def v3_chat_completions():
-            try:
-                platform = request.headers.get("X-Platform") or request.args.get("platform", "openclaw")
-                adapter = SelectorFactory.get_adapter(platform)
-                core = SelectorFactory.get_core()
-                
-                data = request.get_json()
-                if not data:
-                    return jsonify({"error": {"message": "Request body is required"}}), 400
-                
-                parsed = adapter.parse_chat_request(data)
-                
-                if parsed.get("model") in ["auto", "smart-select"]:
-                    model_id, reason = core.select(parsed["task_description"])
-                else:
-                    model_id = parsed["model"]
-                    reason = "用户指定"
-                
-                logger.info(f"[V3/{platform}] 选择: {model_id} - {reason}")
-                
-                return jsonify({
-                    "model": model_id,
-                    "reason": reason,
-                    "platform": platform
-                })
-                
-            except ValueError as e:
-                logger.warning(f"[V3] 平台未注册: {e}")
-                return jsonify({"error": {"message": str(e), "fallback": True}}), 400
-            except Exception as e:
-                logger.error(f"[V3] Error: {e}")
-                return jsonify({"error": {"message": str(e)}}), 500
-        
-        @self.app.route("/v3/models", methods=["GET"])
-        def v3_list_models():
-            try:
-                core = SelectorFactory.get_core()
-                models = core.get_models()
-                
-                data = []
-                for model_id, info in models.items():
-                    data.append({
-                        "id": model_id,
-                        "object": "model",
-                        "created": 1700000000,
-                        "owned_by": info["provider"],
-                        "provider": info["provider"],
-                        "capabilities": info["capabilities"]
-                    })
-                
-                return jsonify({"object": "list", "data": data})
-                
-            except Exception as e:
-                logger.error(f"[V3] Error: {e}")
-                return jsonify({"error": {"message": str(e)}}), 500
-        
-        @self.app.route("/v3/health", methods=["GET"])
-        def v3_health():
-            return jsonify({
-                "status": "ok",
-                "service": "Smart Model Selector V3",
-                "platforms": SelectorFactory.list_platforms()
-            })
-    
-    def _build_task_description(self, messages: list) -> str:
-        """从消息构建任务描述"""
-        parts = []
-        for msg in messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-            parts.append(f"[{role}]: {content}")
-        return "\n".join(parts)
-    
-    def _get_provider_from_model(self, model: str) -> str:
-        """从模型名推断提供商"""
-        model_lower = model.lower()
-        
-        if "claude" in model_lower:
-            return "anthropic"
-        elif "gemini" in model_lower:
-            return "google"
-        elif "gpt" in model_lower or "openai" in model_lower:
-            return "openai"
-        elif "deepseek" in model_lower:
-            return "deepseek"
-        elif "qwen" in model_lower or "silicon" in model_lower:
-            return "siliconflow"
-        elif "minimax" in model_lower:
-            return "minimax"
-        else:
-            return "google"  # 默认
-    
-    def _call_api(self, provider: str, model: str, messages: list, 
-                  temperature: float, max_tokens: int) -> Dict[str, Any]:
-        """调用 API"""
-        
-        # 使用调度器的预检逻辑
-        self.dispatcher.initialize_system()
-        
-        # 构建请求格式
-        payload = {
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
-        
-        # 根据提供商构建请求
-        if provider == "anthropic":
-            return self._call_anthropic(model, messages, temperature, max_tokens)
-        elif provider == "google":
-            return self._call_google(model, messages, temperature, max_tokens)
-        elif provider == "openai":
-            return self._call_openai(model, messages, temperature, max_tokens)
-        elif provider == "deepseek":
-            return self._call_deepseek(model, messages, temperature, max_tokens)
-            return self._call_google(model, messages, temperature, max_tokens)
-    
-    def _find_valid_key(self, provider: str) -> Optional[str]:
-        """查找指定提供商的有效 API Key"""
-        # 初始化系统
-        self.dispatcher.initialize_system()
-        
-        # 查找该 provider 的 key
-        for api in self.dispatcher.api_keys:
-            if api.provider == provider:
-                return api.key
-        
-        return None
+@app.route("/v1/chat/completions", methods=["POST"])
+def chat_completions():
+    data = request.get_json()
+    if not data or "messages" not in data:
+        return jsonify({"error": "Missing messages"}), 400
 
-    def _call_anthropic(self, model: str, messages: list, 
-                        temperature: float, max_tokens: int) -> Dict[str, Any]:
-        """调用 Anthropic API"""
-        api_key = self._find_valid_key("anthropic")
-        if not api_key:
-            raise Exception("No valid Anthropic API key available")
+    messages = data.get("messages", [])
+    model = data.get("model", "auto")
+    temperature = data.get("temperature", 0.7)
+    max_tokens = data.get("max_tokens", 4096)
+
+    logger.info(f"📥 收到请求: Model={model}, Messages={len(messages)}")
+
+    # 🚀 核心根治逻辑：调用带自动故障转移的请求
+    # 它会自动尝试当前 Key，失败则自动切下一张 Key，直到成功或 Key 耗尽
+    result = dispatcher.runtime_request_with_failover(
+        messages=messages,
+        max_retries=5, # 给你 5 次机会，把 7 个 Key 轮一遍
+        timeout=60
+    )
+
+    if result["success"]:
+        content = result["response"]["content"]
+        provider = result.get("provider", "unknown")
+        actual_model = result.get("model", "unknown")
         
-        headers = {
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
+        # 构建 OpenAI 兼容响应
+        response = {
+            "id": f"chatcmpl-{int(time.time())}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": actual_model,
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": "stop"
+            }],
+            "usage": {"total_tokens": 0},
+            "system_fingerprint": f"opencode-{provider}-failover"
         }
-        
-        # 转换消息格式
-        anthropic_messages = []
-        for msg in messages:
-            role = msg.get("role", "user")
-            if role == "system":
-                continue  # Anthropic 不支持 system 角色
-            anthropic_messages.append({
-                "role": role,
-                "content": msg.get("content", "")
-            })
-        
-        payload = {
-            "model": model,
-            "messages": anthropic_messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
-        
-        url = "https://api.anthropic.com/v1/messages"
-        
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            data = response.json()
-            
-            return {
-                "id": f"chatcmpl-{data.get('id', 'unknown')}",
-                "object": "chat.completion",
-                "created": data.get("created_time", int(__import__("time").time())),
-                "model": model,
-                "choices": [{
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": data.get("content", [{}])[0].get("text", "")
-                    },
-                    "finish_reason": "stop"
-                }],
-                "usage": {
-                    "prompt_tokens": data.get("usage", {}).get("input_tokens", 0),
-                    "completion_tokens": data.get("usage", {}).get("output_tokens", 0),
-                    "total_tokens": sum(data.get("usage", {}).values())
-                }
-            }
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"Anthropic API error: {e}")
-    
-    def _call_google(self, model: str, messages: list,
-                     temperature: float, max_tokens: int) -> Dict[str, Any]:
-        api_key = self._find_valid_key("google")
-        if not api_key:
-            raise Exception("No valid Google API key available")
-        
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-        
-        # 转换消息格式
-        contents = []
-        for msg in messages:
-            role = msg.get("role", "user")
-            # Google 使用 user/model 而不是 user/assistant
-            google_role = "user" if role == "user" else "model"
-            contents.append({
-                "role": google_role,
-                "parts": [{"text": msg.get("content", "")}]
-            })
-        
-        payload = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_tokens,
-                "topP": 0.95,
-                "topK": 40
-            }
-        }
-        
-        try:
-            response = requests.post(url, json=payload, timeout=60)
-            response.raise_for_status()
-            data = response.json()
-            
-            if "candidates" not in data:
-                raise Exception(f"Google API error: {data}")
-            
-            content = data["candidates"][0]["content"]["parts"][0]["text"]
-            
-            return {
-                "id": f"chatcmpl-google-{int(__import__("time").time())}",
-                "object": "chat.completion",
-                "created": int(__import__("time").time()),
-                "model": model,
-                "choices": [{
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": content
-                    },
-                    "finish_reason": "stop"
-                }],
-                "usage": {
-                    "prompt_tokens": data.get("usageMetadata", {}).get("promptTokenCount", 0),
-                    "completion_tokens": data.get("usageMetadata", {}).get("candidatesTokenCount", 0),
-                    "total_tokens": data.get("usageMetadata", {}).get("totalTokenCount", 0)
-                }
-            }
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"Google API error: {e}")
-    
-    def _call_openai(self, model: str, messages: list,
-                     temperature: float, max_tokens: int) -> Dict[str, Any]:
-        api_key = self._find_valid_key("openai")
-        if not api_key:
-            raise Exception("No valid OpenAI API key available")
-        
-        url = "https://api.openai.com/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
-        
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"OpenAI API error: {e}")
-    
-    def _call_deepseek(self, model: str, messages: list,
-                       temperature: float, max_tokens: int) -> Dict[str, Any]:
-        api_key = self._find_valid_key("deepseek")
-        if not api_key:
-            raise Exception("No valid DeepSeek API key available")
-        
-        url = "https://api.deepseek.com/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        }
-        
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=60)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"DeepSeek API error: {e}")
-    
-    def _build_response(self, response: Dict[str, Any], model: str, 
-                        messages: list) -> Dict[str, Any]:
-        """构建响应"""
+        logger.info(f"✅ 请求成功 (尝试次数: {result['attempts']})")
         return jsonify(response)
-    
-    def _stream_response(self, response: Dict[str, Any], model: str):
-        """流式响应 (兼容 OpenAI SSE 协议)"""
-        def generate():
-            # 1. 提取上游同步返回的完整文本内容
-            try:
-                content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
-            except Exception:
-                content = "⚠️ 模型未返回有效内容"
-
-            # 2. 模拟打字机效果的分块流式输出
-            chunk_size = 15  # 每次吐出的字符数
-            for i in range(0, len(content), chunk_size):
-                chunk = content[i:i+chunk_size]
-                data = {
-                    "id": f"chatcmpl-{int(time.time())}",
-                    "object": "chat.completion.chunk",
-                    "created": int(time.time()),
-                    "model": model,
-                    "choices": [{"index": 0, "delta": {"content": chunk}}]
-                }
-                # 遵循 Server-Sent Events (SSE) 格式规范
-                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-                time.sleep(0.01)  # 极短延迟模拟流式平滑输出
-
-            # 3. 发送结束标志
-            yield "data: [DONE]\n\n"
-
-        return Response(stream_with_context(generate()), content_type='text/event-stream')
-        """流式响应（暂不支持）"""
-        return jsonify({
-            "error": {
-                "message": "Streaming not supported yet",
-                "type": "invalid_request_error",
-                "code": "streaming_not_supported"
-            }
-        }), 400
-    
-        logger.info(f"启动 API Server: http://{self.host}:{self.port}")
-        # 尝试使用 gunicorn 提高并发性能
-        try:
-            import gunicorn
-            # gunicorn 方式启动
-            from gunicorn.app.wsgiapp import WSGIApplication
-            logger.info("使用 gunicorn 并发服务器")
-            WSGIApplication("__main__:app").run()
-        except ImportError:
-            # 降级到 Flask 内置服务器
-            logger.warning("gunicorn 未安装，使用 Flask 内置服务器")
-            self.app.run(host=self.host, port=self.port, debug=False, threaded=True)
-
-
-def main():
-    """主函数"""
-    parser = argparse.ArgumentParser(
-        description="OpenCode Smart Model Selector - API Server"
-    )
-    parser.add_argument(
-        "--host", 
-        default="0.0.0.0",
-        help="监听地址 (默认: 0.0.0.0)"
-    )
-    parser.add_argument(
-        "--port", 
-        type=int, 
-        default=8080,
-        help="监听端口 (默认: 8080)"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="调试模式"
-    )
-    
-    args = parser.parse_args()
-    
-    if not FLASK_AVAILABLE:
-        print("错误: 请先安装 Flask")
-        print("  pip install flask")
-        sys.exit(1)
-    
-    server = APIServer(host=args.host, port=args.port)
-    server.run()
-
+    else:
+        logger.error(f"❌ 所有 Key 均已失效: {result['error']}")
+        return jsonify({"error": {"message": result["error"], "type": "insufficient_quota"}}), 429
 
 if __name__ == "__main__":
-    main()
+    dispatcher.initialize_system()
+    app.run(host="0.0.0.0", port=8080, threaded=True)

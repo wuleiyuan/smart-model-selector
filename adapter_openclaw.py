@@ -280,8 +280,10 @@ def create_chat_completion(adapter: OpenClawAdapter, core,
 
 def main():
     """测试入口"""
+    from pathlib import Path
+    SCRIPT_DIR = Path(__file__).parent
     import sys
-    sys.path.insert(0, "/Users/leiyuanwu/GitHub/opencode-smart-model-selector")
+    sys.path.insert(0, str(SCRIPT_DIR))
     
     from selector_core import SelectorCore
     
