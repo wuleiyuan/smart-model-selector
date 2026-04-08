@@ -7,7 +7,7 @@ OpenCode Smart Model Selector 版本管理模块
 - PATCH: 向后兼容的 bug 修复
 """
 
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 __author__ = "OpenCode Team"
 __description__ = "智能模型调度系统"
 
@@ -64,6 +64,10 @@ VERSION_HISTORY = {
     "4.2.0": {
         "date": "2026-04-08",
         "description": "功能增强: 添加 gemini-2.5-pro/flash 模型支持，配置回退机制"
+    },
+    "4.2.1": {
+        "date": "2026-04-08",
+        "description": "配置优化: 恢复 gemini-3.1-pro-preview 为文本任务首选"
     }
 }
 
