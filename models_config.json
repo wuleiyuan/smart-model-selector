@@ -199,6 +199,48 @@
       ],
       "enabled": true,
       "priority": 999
+    },
+    "gemini-2.5-pro": {
+      "id": "gemini-2.5-pro",
+      "name": "Gemini 2.5 Pro",
+      "provider": "google",
+      "capabilities": [
+        "coding",
+        "research",
+        "multimodal",
+        "long_context"
+      ],
+      "context_window": 1048576,
+      "cost_per_1k_input": 1.25,
+      "cost_per_1k_output": 5.0,
+      "latency_tier": "medium",
+      "enabled": true,
+      "priority": 998,
+      "tags": [
+        "premium",
+        "multimodal"
+      ]
+    },
+    "gemini-2.5-flash": {
+      "id": "gemini-2.5-flash",
+      "name": "Gemini 2.5 Flash",
+      "provider": "google",
+      "capabilities": [
+        "coding",
+        "fast",
+        "multimodal"
+      ],
+      "context_window": 1048576,
+      "cost_per_1k_input": 0.0,
+      "cost_per_1k_output": 0.0,
+      "latency_tier": "fast",
+      "enabled": true,
+      "priority": 997,
+      "tags": [
+        "free",
+        "fast",
+        "multimodal"
+      ]
     }
   },
   "task_mappings": {
@@ -207,13 +249,10 @@
     ],
     "research": [
       "gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "claude-opus-4-6",
-      "gemini-2-0-pro",
-      "gpt-4o"
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-pro",
+      "claude-opus-4-6"
     ],
     "writing": [
       "minimax-2.7-pro",
@@ -238,22 +277,17 @@
       "deepseek-chat"
     ],
     "coding": [
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-2.0-flash-exp",
-      "deepseek-chat",
-      "qwen-2-5-coder-32b",
-      "gemini-2-0-flash"
+      "gemini-2.5-pro",
+      "gemini-3.1-pro-preview",
+      "gemini-2.5-flash",
+      "minimax-2.7-pro"
     ],
     "research": [
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3.1-pro-preview",
-      "gemini-2-0-pro",
-      "claude-opus-4-6"
+      "gemini-2.5-pro",
+      "gemini-3.1-pro-preview",
+      "gemini-2.5-flash",
+      "claude-opus-4-6",
+      "minimax-2.7-pro"
     ]
   },
   "settings": {
