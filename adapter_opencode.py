@@ -10,6 +10,7 @@ V3.0.0 - 通用架构
 import sys
 import json
 import logging
+from pathlib import Path
 from typing import Dict, Any, Optional
 
 from base_adapter import BaseCLIAdapter, build_task_from_messages, create_error_response
@@ -199,8 +200,8 @@ def main():
     
     args = parser.parse_args()
     
-SCRIPT_DIR = Path(__file__).parent
-sys.path.insert(0, str(SCRIPT_DIR))
+    SCRIPT_DIR = Path(__file__).parent
+    sys.path.insert(0, str(SCRIPT_DIR))
     from selector_core import SelectorCore
     
     # 初始化
