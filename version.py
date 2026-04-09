@@ -72,6 +72,10 @@ VERSION_HISTORY = {
     "5.0.0": {
         "date": "2026-04-09",
         "description": "🚀 V6 脑机合并完全体: selector_core(大脑)与dispatcher(肌肉)分离，意图路由 + 流式直连 + 前端保活"
+    },
+    "5.1.0": {
+        "date": "2026-04-09",
+        "description": "🛡️ P0 输出避让协议 + 📖 Apple 风格 README + 🔧 一键安装脚本"
     }
 }
 
