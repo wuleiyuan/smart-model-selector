@@ -336,6 +336,8 @@ else:
                 *)
                     print_info "API Server: op api [start|stop|restart]"
                     ;;
+            esac
+            ;;
         "engine")
             # 双引擎控制命令
             shift
