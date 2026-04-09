@@ -1,0 +1,11 @@
+{
+  "google_paid": [
+    "YOUR_GOOGLE_PAID_API_KEY_1"
+  ],
+  "google_free": [
+    "YOUR_GOOGLE_FREE_API_KEY"
+  ],
+  "minimax_paid": [
+    "YOUR_MINIMAX_PAID_API_KEY"
+  ]
+}
