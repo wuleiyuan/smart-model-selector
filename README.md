@@ -1,6 +1,6 @@
 # 🧠 Smart Model Selector
 
-[![Version](https://img.shields.io/badge/Version-v4.1.3-blue.svg)](https://github.com/wuleiyuan/smart-model-selector/releases)
+[![Version](https://img.shields.io/badge/Version-v5.0.0-blue.svg)](https://github.com/wuleiyuan/smart-model-selector/releases)
 [![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/wuleiyuan/smart-model-selector?style=social)](https://github.com/wuleiyuan/smart-model-selector/stargazers)
@@ -13,6 +13,12 @@
 > 🤖 AI 模型路由 | ⚡ API 负载均衡 | 🛡️ 自动故障转移 | 💰 成本优化 | 🔄 OpenCode/OpenClaw/Cursor 多平台支持
 
 **关键字**: AI, LLM, Model Router, API Gateway, Load Balancer, Claude, GPT, Gemini, DeepSeek, Qwen, OpenCode, OpenClaw, Cursor, Smart Selector, Token Optimization, API Failover, Multi-Provider, Model Selection, AI Coding Assistant
+
+
+## 🎉 V5.0 究极进化：双引擎全原生真流式 (Dual-Streaming)
+- 🚀 **真·流式输出**：打通 MiniMax 与 Gemini 原生 SSE 流式通道，像打字机一样秒回，彻底告别 OpenCode 前端转圈死锁。
+- 🛡️ **无缝保活机制**：触发故障转移（Failover）时，瞬间向前端吐出 `[已切至备用引擎...]`，买足 120 秒等待时间，免疫 `Bad Gateway`。
+- ⚡ **抗超大上下文**：专为 10万+ Token 级大项目代码重构优化，破解默认超时截断绝症。
 
 ## ✨ 核心特性
 
@@ -42,6 +48,12 @@
 > 🤖 AI 模型路由 | ⚡ API 负载均衡 | 🛡️ 自动故障转移 | 💰 成本优化 | 🔄 OpenCode/Claude/GPT/Gemini 多模型支持
 
 **关键字**: AI, LLM, Model Router, API Gateway, Load Balancer, Claude, GPT, Gemini, DeepSeek, Qwen, OpenCode, Smart Selector, Token Optimization, API Failover, Multi-Provider
+
+
+## 🎉 V5.0 究极进化：双引擎全原生真流式 (Dual-Streaming)
+- 🚀 **真·流式输出**：打通 MiniMax 与 Gemini 原生 SSE 流式通道，像打字机一样秒回，彻底告别 OpenCode 前端转圈死锁。
+- 🛡️ **无缝保活机制**：触发故障转移（Failover）时，瞬间向前端吐出 `[已切至备用引擎...]`，买足 120 秒等待时间，免疫 `Bad Gateway`。
+- ⚡ **抗超大上下文**：专为 10万+ Token 级大项目代码重构优化，破解默认超时截断绝症。
 
 ## ✨ 核心特性
 

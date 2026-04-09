@@ -1,129 +1,87 @@
-#!/usr/bin/env python3
-import json
-import logging
-import requests
-import sys
-import fcntl
+import json, os, logging, requests
 from pathlib import Path
-from dataclasses import dataclass
-from enum import Enum
-import os
-from typing import List, Dict, Any, Optional, Union
-import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from logging.handlers import RotatingFileHandler
-
-# 保持原有的配置参数
-HEALTH_CHECK_TIMEOUT = 5.0
-LOG_MAX_BYTES = 5 * 1024 * 1024
-LOG_BACKUP_COUNT = 3
-
-# 彩色日志
-class ColoredFormatter(logging.Formatter):
-    COLORS = {'DEBUG': '\033[36m', 'INFO': '\033[32m', 'WARNING': '\033[33m', 'ERROR': '\033[31m', 'CRITICAL': '\033[35m'}
-    RESET = '\033[0m'
-    def format(self, record):
-        levelname = record.levelname
-        if levelname in self.COLORS:
-            record.levelname = f"{self.COLORS[levelname]}{levelname}{self.RESET}"
-        return super().format(record)
 
 logger = logging.getLogger("SmartDispatcher")
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(ColoredFormatter('%(levelname)s - %(message)s'))
-logger.addHandler(console_handler)
 logger.setLevel(logging.INFO)
-
-@dataclass
-class APIKey:
-    provider: str
-    model: str
-    key: str
-    base_url: str
-    tier: str
-    def __post_init__(self): self.key = self.key.strip()
+if not logger.handlers:
+    ch = logging.StreamHandler()
+    ch.setFormatter(logging.Formatter('\033[36m%(levelname)s - %(message)s\033[0m'))
+    logger.addHandler(ch)
 
 class SmartModelDispatcher:
-    def __init__(self, config_file_path: Optional[Path] = None):
-        self.base_dir = Path(__file__).parent
-        self.config_source = config_file_path or (self.base_dir / "api_config.json")
-        self.auth_config = Path.home() / ".local" / "share" / "opencode" / "auth.json"
-        self.api_keys: List[APIKey] = []
-        
-        # 代理设置 (保持你的逻辑)
-        http_proxy = os.environ.get('HTTP_PROXY') or os.environ.get('http_proxy')
-        self.proxy_sandbox = {"http": http_proxy, "https": http_proxy} if http_proxy else None
+    def __init__(self):
+        self.KEYS_PATH = Path("/Users/leiyuanwu/LocalProjects/OpenCode/smart-model-selector/keys.json")
+        self.api_keys = []
         self.session = requests.Session()
         self.initialize_system()
 
     def initialize_system(self):
-        # [核心对齐] 默认 Google 模型升级到 3.1 Pro
-        self._load_keys_from_auth()
-        logger.info(f"[OK] 调度引擎初始化完成: {len(self.api_keys)} 个 Key 在线")
-
-    def _load_keys_from_auth(self):
-        if not self.auth_config.exists(): return
-        try:
-            with open(self.auth_config, 'r') as f:
-                data = json.load(f)
-            
-            # 加载 Google Pro Keys
-            for key in data.get("google_pro_api_keys", []):
-                if key: self.api_keys.append(APIKey("google", "gemini-3.1-pro-preview", key, "https://generativelanguage.googleapis.com", "pro"))
-            
-            # 加载 Google Free Keys
-            for key in data.get("google_free_api_keys", []):
-                if key: self.api_keys.append(APIKey("google", "gemini-3.1-flash-lite-preview", key, "https://generativelanguage.googleapis.com", "free"))
-            
-            # 其他 Provider (保持你的映射)
-            if data.get("minimax_api_key"):
-                self.api_keys.append(APIKey("minimax", "minimax-2.7-pro", data["minimax_api_key"], "https://api.minimax.chat/v1", "auth"))
-        except Exception as e:
-            logger.error(f"加载 Key 失败: {e}")
-
-    def runtime_request_with_failover(self, messages, model_id="auto", max_retries=5):
-        """运行时自动故障转移逻辑"""
-        # 简单轮询逻辑，优先使用选定的模型
-        target_keys = [k for k in self.api_keys if model_id in k.model or model_id == "auto"]
-        if not target_keys: target_keys = self.api_keys # 保底
-
-        for i in range(max_retries):
-            api = target_keys[i % len(target_keys)]
+        if self.KEYS_PATH.exists():
             try:
-                res = self._make_api_request(api, messages)
-                if res: return {"success": True, "response": res, "model": api.model}
+                with open(self.KEYS_PATH) as f:
+                    data = json.load(f)
+                    # 优先挂载 MiniMax
+                    for k in data.get("minimax_paid", []):
+                        if k: self.api_keys.append({"provider": "minimax", "key": k})
+                    # 挂载 Google 备用
+                    for k in data.get("google_paid", []) + data.get("google_free", []):
+                        if k: self.api_keys.append({"provider": "google", "key": k})
             except Exception as e:
-                logger.warning(f"🔄 尝试失败 ({api.provider}): {str(e)[:50]}")
-                continue
-        return {"success": False, "error": "所有重试均已失败"}
+                logger.error(f"读取密钥失败: {e}")
+        logger.info(f"⛽ 混动引擎就绪: 共 {len(self.api_keys)} 个 Key 在线")
 
-    def _make_api_request(self, api: APIKey, messages: List[Dict]):
-        # [核心修复] Google API 专用协议转换
-        if api.provider == "google":
-            # 必须使用 v1beta 且 Key 放在 URL 后面
-            url = f"{api.base_url}/v1beta/models/{api.model.split('/')[-1]}:generateContent?key={api.key}"
-            headers = {"Content-Type": "application/json"}
-            # Google 专用消息格式
-            prompt = messages[-1]["content"] if messages else ""
-            payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        else:
-            # OpenAI 标准协议 (MiniMax 等)
-            url = f"{api.base_url}/chat/completions"
-            headers = {"Authorization": f"Bearer {api.key}", "Content-Type": "application/json"}
-            payload = {"model": api.model, "messages": messages}
-
-        # 执行请求
-        response = self.session.post(url, headers=headers, json=payload, timeout=30, proxies=self.proxy_sandbox)
+    def dispatch_stream(self, messages):
+        last_err = "未知错误"
+        for i, api in enumerate(self.api_keys):
+            provider = api["provider"]
+            logger.info(f"🎯 启动引擎 #{i+1} [{provider.upper()}] ...")
+            try:
+                if provider == "minimax":
+                    yield from self._stream_minimax(api, messages)
+                else:
+                    yield from self._stream_google(api, messages)
+                return  # 只要某一个 Key 成功跑完流，就直接退出循环！
+            except Exception as e:
+                last_err = str(e)
+                logger.warning(f"⚠️ 引擎 [{provider}] 熄火: {last_err}")
+                continue # 失败则无缝换下一个 Key
         
-        if response.status_code == 200:
-            data = response.json()
-            if api.provider == "google":
-                return {"content": data["candidates"][0]["content"]["parts"][0]["text"]}
-            else:
-                return {"content": data["choices"][0]["message"]["content"]}
-        
-        raise Exception(f"HTTP {response.status_code}: {response.text[:100]}")
+        # 如果把所有的 Key 都试光了还是不行
+        chunk = {"id": "error", "object": "chat.completion.chunk", "choices": [{"delta": {"content": f"\n\n🚨 全部引擎失效: {last_err}"}, "index": 0}]}
+        yield f"data: {json.dumps(chunk)}\n\n"
+        yield "data: [DONE]\n\n"
 
-if __name__ == "__main__":
-    dispatcher = SmartModelDispatcher()
-    print("Dispatcher Ready.")
+    def _stream_minimax(self, api_item, messages):
+        url = "https://api.minimax.chat/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {api_item['key']}", "Content-Type": "application/json"}
+        # 【关键】开启 MiniMax 的官方原生流式输出
+        payload = {"model": "MiniMax-M2.7", "messages": messages, "stream": True}
+        
+        # timeout=(10, 120) 代表：10秒连不上就报错，但是允许模型花 120 秒慢慢推理和回传数据
+        resp = self.session.post(url, headers=headers, json=payload, stream=True, timeout=(10, 120))
+        resp.raise_for_status()
+        
+        for line in resp.iter_lines():
+            if line:
+                decoded = line.decode('utf-8')
+                # OpenCode 只认 data: 开头的标准协议
+                if decoded.startswith("data:"):
+                    yield decoded + "\n\n"
+
+    def _stream_google(self, api_item, messages):
+        # 【关键保活机制】瞬间吐出占位符，立刻喂饱 OpenCode 前端，让它无限期等下去
+        think_msg = {"id": "gemini", "object": "chat.completion.chunk", "choices": [{"delta": {"content": "\n\n🔄 [MiniMax限流，已无缝切换至 Gemini 备用引擎，深度思考中...]\n\n"}, "index": 0}]}
+        yield f"data: {json.dumps(think_msg)}\n\n"
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_item['key']}"
+        prompt = messages[-1]["content"] if messages else "你好"
+        proxies = {"http": os.environ.get("HTTP_PROXY", ""), "https": os.environ.get("HTTPS_PROXY", "")}
+        if not proxies.get("http"): proxies = None
+        
+        resp = self.session.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=(10, 120), proxies=proxies)
+        resp.raise_for_status()
+        
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        final_msg = {"id": "gemini", "object": "chat.completion.chunk", "choices": [{"delta": {"content": text}, "index": 0}]}
+        yield f"data: {json.dumps(final_msg)}\n\n"
+        yield "data: [DONE]\n\n"
