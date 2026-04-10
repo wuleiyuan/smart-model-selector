@@ -11,12 +11,18 @@ class SelectorCore:
         self.BASE_DIR = Path(__file__).resolve().parent
         self.KEYS_PATH = self.BASE_DIR / "keys.json"
         
-        # 🔫 武器库清单
-        self.inventory = {"google": 0, "minimax": 0}
+        # 🔫 武器库清单 (动态扩展版)
+        self.inventory = {
+            "google": 0, 
+            "minimax": 0,
+            "deepseek": 0
+        }
+        
         # 🚀 模型火力底座
         self.models = {
             "gemini": "gemini-3.1-pro-preview",
-            "minimax": "minimax-m2.7"
+            "minimax": "minimax-m2.7",
+            "deepseek": "deepseek-coder"
         }
         self._scan_armory()
 
@@ -29,10 +35,13 @@ class SelectorCore:
                     google_paid = len(data.get("google_paid", []))
                     google_free = len(data.get("google_free", []))
                     minimax_paid = len(data.get("minimax_paid", []))
+                    deepseek_paid = len(data.get("deepseek", []))
                     
                     self.inventory["google"] = google_paid + google_free
                     self.inventory["minimax"] = minimax_paid
-                    logger.info(f"🧠 大脑接管弹夹: Google 3.1 Pro x{self.inventory['google']}把, MiniMax M2.7 x{self.inventory['minimax']}把")
+                    self.inventory["deepseek"] = deepseek_paid
+                    
+                    logger.info(f"🧠 大脑接管弹夹: Google x{self.inventory['google']}, MiniMax x{self.inventory['minimax']}, DeepSeek x{self.inventory['deepseek']}")
             except Exception as e:
                 logger.warning(f"大脑无法读取弹夹库存: {e}")
 
@@ -40,29 +49,40 @@ class SelectorCore:
         """兼容原有架构的探测接口"""
         return {
             self.models["gemini"]: {"name": "Gemini 3.1 Pro", "inventory": self.inventory["google"]},
-            self.models["minimax"]: {"name": "MiniMax M2.7", "inventory": self.inventory["minimax"]}
+            self.models["minimax"]: {"name": "MiniMax M2.7", "inventory": self.inventory["minimax"]},
+            self.models["deepseek"]: {"name": "DeepSeek Coder", "inventory": self.inventory["deepseek"]}
         }
 
     def select(self, task_text: str):
         """核心路由逻辑：根据提示词分发给最合适的模型"""
         task_text = str(task_text).lower()
         
-        # 0. 绝境断水逻辑 (如果某一方钥匙耗尽，强制用另一方)
-        if self.inventory["google"] == 0 and self.inventory["minimax"] > 0:
-            return self.models["minimax"], "[库存警报] Google弹夹为空，强制切至 MiniMax"
-
-        # 1. 中文创作/文案润色场景 (发给最懂中文特性的 MiniMax)
-        writing_kw = ['润色', '写封信', '文章', '语气', '小说', '剧本', '公文', '写总结', '翻译成中文']
-        if any(k in task_text for k in writing_kw) and self.inventory["minimax"] > 0:
-            return self.models["minimax"], "中文创作场景 -> 调度 MiniMax M2.7"
-
-        # 2. 深度 Coding / 逻辑推演场景 (发给代码最强王者 Gemini 3.1 Pro)
-        coding_kw = ['代码', 'python', 'java', 'bug', '报错', '重构', '算法', 'html', '正则', '排序']
+        # 0. 绝境断水逻辑 (如果首选引擎断水，强行降级)
+        total_keys = sum(self.inventory.values())
+        if total_keys == 0:
+            return "auto", "全军覆没 -> 弹夹为空，等待奇迹"
+            
+        # 1. 编程 / 算法 / Bug 排查场景 -> 优先 DeepSeek Coder (若有弹药)，否则 Gemini
+        coding_kw = ['代码', 'python', 'java', 'bug', '报错', '重构', '算法', 'html', '正则', '排序', '写个脚本']
         if any(k in task_text for k in coding_kw):
-            return self.models["gemini"], "深度代码重构 -> 调度 Gemini 3.1 Pro"
+            if self.inventory["deepseek"] > 0:
+                return self.models["deepseek"], "硬核代码场景 -> 呼叫 DeepSeek Coder 特种部队"
+            elif self.inventory["google"] > 0:
+                return self.models["gemini"], "深度代码重构 -> 呼叫 Gemini 3.1 Pro 主力"
 
-        # 3. 默认主线 (日常问答、英文文档等，无条件主用 Google 3.1 Pro)
-        return self.models["gemini"], "默认主战序列 -> 调度 Gemini 3.1 Pro"
+        # 2. 中文创作/文案润色场景 -> 最懂中文特性的 MiniMax
+        writing_kw = ['润色', '写封信', '文章', '语气', '小说', '剧本', '公文', '写总结', '翻译成中文']
+        if any(k in task_text for k in writing_kw):
+            if self.inventory["minimax"] > 0:
+                return self.models["minimax"], "中文创作场景 -> 调度 MiniMax M2.7"
+
+        # 3. 默认主线防线
+        if self.inventory["google"] > 0:
+            return self.models["gemini"], "默认主战序列 -> 调度 Gemini 3.1 Pro"
+        elif self.inventory["deepseek"] > 0:
+            return self.models["deepseek"], "备用火力 -> 调度 DeepSeek"
+        else:
+            return self.models["minimax"], "仅存火力 -> 强制切至 MiniMax"
 
 if __name__ == "__main__":
     import argparse
@@ -88,6 +108,7 @@ if __name__ == "__main__":
     if args.status:
         print("\n📊 [系统状态] 武器库清点完毕:")
         print(f"  🟢 Google 引擎 (Gemini 3.1 Pro): \033[32m{core.inventory['google']} 把\033[0m 可用密钥")
+        print(f"  🔵 DeepSeek 引擎 (Coder V3): \033[36m{core.inventory['deepseek']} 把\033[0m 可用密钥")
         print(f"  🟡 MiniMax 引擎 (M2.7 Pro): \033[33m{core.inventory['minimax']} 把\033[0m 可用密钥\n")
         sys.exit(0)
 

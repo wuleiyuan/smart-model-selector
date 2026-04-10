@@ -57,23 +57,24 @@ class DeepSeekSkill(BaseModelSkill):
             for line in resp.iter_lines():
                 if line:
                     decoded = line.decode("utf-8")
+                    # 🩹 P1 修复：拦截底层 [DONE]，防止三重 DONE 冗余
+                    if "data: [DONE]" in decoded:
+                        continue
                     if decoded.startswith("data:"):
                         # DeepSeek 直接返回 SSE 格式，原样转发
                         yield decoded + "\n\n"
-                    elif decoded == "data: [DONE]":
-                        yield "data: [DONE]\n\n"
             
-            # 确保结束
-            yield "data: [DONE]\n\n"
+            # 已经去除了内置的 DONE 返回，由 dispatcher 统一处理
             
         except Exception as e:
             error_chunk = {
                 "id": "error",
                 "object": "chat.completion.chunk",
-                "choices": [{"delta": {"content": f"[DeepSeek Error] {str(e)[:100]}"}, "index": 0}]
+                "choices": [{"delta": {"content": f"\n\n> ⚠️ **[DeepSeek 引擎异常]**: {str(e)}\n\n"}, "index": 0}]
             }
             yield f"data: {json.dumps(error_chunk)}\n\n"
-            yield "data: [DONE]\n\n"
+            # 🩹 P0 修复：必须抛出异常！激活 dispatcher 故障轮询
+            raise e
     
     def health_check(self, api_key: str) -> bool:
         """检查 DeepSeek API 是否可用"""
