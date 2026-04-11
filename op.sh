@@ -224,7 +224,7 @@ is_task_description() {
     fi
     # 如果是已知命令词
     case "$first_arg" in
-        "smart"|"-s"|"--smart"|"current"|"help"|"-h"|"--help"|"main"|"coding"|"fast"|"crawler"|"chinese"|"research"|"auto"|"reset"|"set"|"version"|"-v")
+        "smart"|"-s"|"--smart"|"current"|"help"|"-h"|"--help"|"main"|"coding"|"fast"|"crawler"|"chinese"|"research"|"auto"|"reset"|"set"|"version"|"-v"|"api"|"engine"|"daemon")
             return 1
             ;;
     esac

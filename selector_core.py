@@ -4,121 +4,80 @@ import logging
 from pathlib import Path
 
 logger = logging.getLogger("SelectorCore")
-logger.setLevel(logging.INFO)
 
 class SelectorCore:
     def __init__(self):
         self.BASE_DIR = Path(__file__).resolve().parent
         self.KEYS_PATH = self.BASE_DIR / "keys.json"
         
-        # 🔫 武器库清单 (动态扩展版)
-        self.inventory = {
-            "google": 0, 
-            "minimax": 0,
-            "deepseek": 0
-        }
-        
-        # 🚀 模型火力底座
-        self.models = {
-            "gemini": "gemini-3.1-pro-preview",
-            "minimax": "minimax-m2.7",
-            "deepseek": "deepseek-coder"
-        }
+        # 🔫 动态武器库清单
+        self.inventory = {"google": 0, "minimax": 0}
         self._scan_armory()
 
     def _scan_armory(self):
-        """开机扫描弹夹，确认可用火力"""
+        """开机全面扫描弹夹，包括 other_free 里的核武库"""
         if self.KEYS_PATH.exists():
             try:
                 with open(self.KEYS_PATH, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    google_paid = len(data.get("google_paid", []))
-                    google_free = len(data.get("google_free", []))
-                    minimax_paid = len(data.get("minimax_paid", []))
-                    deepseek_paid = len(data.get("deepseek", []))
+                    self.inventory["google"] = len(data.get("google_paid", [])) + len(data.get("google_free", []))
+                    self.inventory["minimax"] = len(data.get("minimax_paid", []))
                     
-                    self.inventory["google"] = google_paid + google_free
-                    self.inventory["minimax"] = minimax_paid
-                    self.inventory["deepseek"] = deepseek_paid
-                    
-                    logger.info(f"🧠 大脑接管弹夹: Google x{self.inventory['google']}, MiniMax x{self.inventory['minimax']}, DeepSeek x{self.inventory['deepseek']}")
+                    # 🚀 扫描 other_free 里的隐藏弹药
+                    for item in data.get("other_free", []):
+                        provider = item.get("p")
+                        if provider:
+                            self.inventory[provider] = self.inventory.get(provider, 0) + 1
+                            
+                # 打印火力配置
+                active_providers = [f"{k}({v}把)" for k, v in self.inventory.items() if v > 0]
+                logger.info(f"🧠 大脑已接管核武库: {', '.join(active_providers)}")
             except Exception as e:
                 logger.warning(f"大脑无法读取弹夹库存: {e}")
 
-    def get_models(self):
-        """兼容原有架构的探测接口"""
-        return {
-            self.models["gemini"]: {"name": "Gemini 3.1 Pro", "inventory": self.inventory["google"]},
-            self.models["minimax"]: {"name": "MiniMax M2.7", "inventory": self.inventory["minimax"]},
-            self.models["deepseek"]: {"name": "DeepSeek Coder", "inventory": self.inventory["deepseek"]}
-        }
-
     def select(self, task_text: str):
-        """核心路由逻辑：根据提示词分发给最合适的模型"""
+        """🌟 终极路由逻辑：根据提示词分发给最合适的模型"""
         task_text = str(task_text).lower()
-        
-        # 0. 绝境断水逻辑 (如果首选引擎断水，强行降级)
-        total_keys = sum(self.inventory.values())
-        if total_keys == 0:
-            return "auto", "全军覆没 -> 弹夹为空，等待奇迹"
-            
-        # 1. 编程 / 算法 / Bug 排查场景 -> 优先 DeepSeek Coder (若有弹药)，否则 Gemini
-        coding_kw = ['代码', 'python', 'java', 'bug', '报错', '重构', '算法', 'html', '正则', '排序', '写个脚本']
+
+        # 1. 深度 Coding 场景 -> 优先 DeepSeek，备用 Claude/Google
+        coding_kw = ['代码', 'python', 'java', 'bug', '报错', '重构', '算法', '正则', '排序']
         if any(k in task_text for k in coding_kw):
-            if self.inventory["deepseek"] > 0:
-                return self.models["deepseek"], "硬核代码场景 -> 呼叫 DeepSeek Coder 特种部队"
-            elif self.inventory["google"] > 0:
-                return self.models["gemini"], "深度代码重构 -> 呼叫 Gemini 3.1 Pro 主力"
+            if self.inventory.get("deepseek", 0) > 0:
+                return "deepseek", "深度代码重构 -> 极速调度 DeepSeek Coder"
+            return "google", "代码重构 -> 调度 Gemini 3.1 Pro"
 
-        # 2. 中文创作/文案润色场景 -> 最懂中文特性的 MiniMax
-        writing_kw = ['润色', '写封信', '文章', '语气', '小说', '剧本', '公文', '写总结', '翻译成中文']
+        # 2. 中文长文本/润色 -> 优先 Kimi/智谱/千问
+        writing_kw = ['润色', '写封信', '文章', '小说', '总结', '翻译']
         if any(k in task_text for k in writing_kw):
-            if self.inventory["minimax"] > 0:
-                return self.models["minimax"], "中文创作场景 -> 调度 MiniMax M2.7"
+            for p in ["kimi", "zhipu", "qwen", "minimax"]:
+                if self.inventory.get(p, 0) > 0:
+                    return p, f"中文创作场景 -> 调度特化引擎 {p.capitalize()}"
 
-        # 3. 默认主线防线
-        if self.inventory["google"] > 0:
-            return self.models["gemini"], "默认主战序列 -> 调度 Gemini 3.1 Pro"
-        elif self.inventory["deepseek"] > 0:
-            return self.models["deepseek"], "备用火力 -> 调度 DeepSeek"
-        else:
-            return self.models["minimax"], "仅存火力 -> 强制切至 MiniMax"
+        # 3. 复杂逻辑推演 -> 优先 OpenAI (GPT-4o)
+        logic_kw = ['原理', '为什么', '分析', '规划', '架构']
+        if any(k in task_text for k in logic_kw) and self.inventory.get("openai", 0) > 0:
+            return "openai", "高难度逻辑推演 -> 调度 OpenAI GPT-4o"
+
+        # 4. 默认主线兜底
+        if self.inventory.get("google", 0) > 0:
+            return "google", "默认主战序列 -> 调度 Gemini 3.1 Pro"
+        
+        # 绝境逢生：随便找一个有钥匙的 provider
+        for p, count in self.inventory.items():
+            if count > 0: return p, f"默认兜底 -> 调度 {p}"
+        
+        return "error", "弹药库彻底枯竭！"
 
 if __name__ == "__main__":
-    import argparse
-    import sys
-
-    # 禁用默认的啰嗦日志，保持 CLI 界面清爽
+    import argparse, sys
     logger.setLevel(logging.ERROR) 
-
-    # 创建专业的命令行解析器
-    parser = argparse.ArgumentParser(
-        description="🦞 Smart Model Selector - 智能模型路由核心",
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog="示例:\n  python3 selector_core.py \"帮我写一个 python 爬虫\"\n  python3 selector_core.py --status"
-    )
-    
-    parser.add_argument("prompt", nargs="?", type=str, help="输入需要大脑分析的任务提示词")
-    parser.add_argument("-s", "--status", action="store_true", help="查看当前系统武器库(弹夹)状态")
-    
+    parser = argparse.ArgumentParser(description="🦞 混动大脑测试")
+    parser.add_argument("prompt", nargs="?", type=str)
     args = parser.parse_args()
-    core = SelectorCore()
-
-    # 路由 1：查看状态 (--status)
-    if args.status:
-        print("\n📊 [系统状态] 武器库清点完毕:")
-        print(f"  🟢 Google 引擎 (Gemini 3.1 Pro): \033[32m{core.inventory['google']} 把\033[0m 可用密钥")
-        print(f"  🔵 DeepSeek 引擎 (Coder V3): \033[36m{core.inventory['deepseek']} 把\033[0m 可用密钥")
-        print(f"  🟡 MiniMax 引擎 (M2.7 Pro): \033[33m{core.inventory['minimax']} 把\033[0m 可用密钥\n")
-        sys.exit(0)
-
-    # 路由 2：分析提示词 (prompt)
-    elif args.prompt:
-        print(f"\n📥 任务输入: \033[36m'{args.prompt}'\033[0m")
-        model, reason = core.select(args.prompt)
-        print(f"🎯 路由结果: 分配至引擎 \033[1;32m[{model}]\033[0m")
-        print(f"💡 决策逻辑: {reason}\n")
     
-    # 路由 3：什么都没输，打印友好的帮助文档
+    core = SelectorCore()
+    if args.prompt:
+        model, reason = core.select(args.prompt)
+        print(f"\n📥 输入: {args.prompt}\n🎯 路由: [{model}]\n💡 逻辑: {reason}\n")
     else:
-        parser.print_help()
+        print("\n📊 武器库清单:", core.inventory)
