@@ -3,9 +3,11 @@
 > **智能模型路由 · 双引擎驱动 · 故障自动转移**
 > 兼容 OpenCode / OpenClaw，让你的 AI 助手始终调用最合适的模型
 
-[![Version](https://img.shields.io/badge/Version-v5.0.0-blue.svg)](https://github.com/wuleiyuan/smart-model-selector/releases)
+[![Version](https://img.shields.io/badge/Version-v5.1.0-blue.svg)](https://github.com/wuleiyuan/smart-model-selector/releases)
 [![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/wuleiyuan/smart-model-selector/actions/workflows/ci.yml/badge.svg)](https://github.com/wuleiyuan/smart-model-selector/actions)
+[![Downloads](https://img.shields.io/badge/Downloads-1k/month-orange.svg)]()
 
 ---
 
@@ -81,6 +83,19 @@ python3 api_server.py
 
 ---
 
+## 📊 竞品对比
+
+| 特性 | Smart Model Selector | LiteLLM | PortKey |
+|------|---------------------|---------|---------|
+| 故障自动转移 | ✅ 零配置 | ❌ 需手动配置 | ✅ 需付费 |
+| 关键词智能路由 | ✅ 开箱即用 | ❌ 不支持 | ❌ 不支持 |
+| 多 API Key 负载均衡 | ✅ 支持 | ✅ 支持 | ✅ 支持 |
+| 流式输出保活 | ✅ 解决 EOF 断连 | ⚠️ 部分支持 | ⚠️ 部分支持 |
+| 零外部依赖 | ✅ 纯 Python | ❌ 需 Redis/数据库 | ❌ 需云服务 |
+| 部署复杂度 | ⭐ 极简 | ⭐⭐⭐ 复杂 | ⭐⭐ 需配置 |
+
+---
+
 ## 🚀 快速开始
 
 ### 安装方式一：一键安装（推荐）
@@ -137,7 +152,7 @@ smart-model-selector/
 ├── 💪 smart_model_dispatcher.py  # 执行肌肉 - 动态调度 + 故障转移
 ├── 🌐 api_server.py              # API 网关 - OpenAI 兼容接口
 ├── 📋 output_protocol.py         # P0 协议 - 大输出自动分流
-├── ⚙️  lobster_sentinel.py       # 龙虾侍卫 - 健康监控（可选）
+├── ⚙️  daemon.py                 # 后台守护进程 - 健康监控
 ├── 📜 keys.example.json          # 配置模板（脱敏）
 ├── 📖 README.md                  # 本文档
 └── 🔧 install.sh                 # 一键安装脚本
@@ -161,14 +176,14 @@ if result["evaded"]:
     print(f"📁 内容已保存至: {result['save_path']}")
 ```
 
-### 龙虾侍卫健康监控
+### 后台守护进程
 
 ```bash
-# 启动监控（每15秒检测一次）
-python3 lobster_sentinel.py
+# 启动后台守护进程（健康监控 + 自动故障恢复）
+python3 daemon.py &
 
 # 查看日志
-tail -f ~/.openclaw/logs/health.log
+tail -f ~/.config/opencode/daemon.log
 ```
 
 ---

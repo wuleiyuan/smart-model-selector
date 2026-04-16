@@ -68,5 +68,5 @@ def chat():
         })
 
 if __name__ == '__main__':
-    print("🦞 龙虾混动网关 V8.1 (全协议兼容版) 启动中...")
+    print("🚀 Smart Model Selector Gateway v5.1.0 启动中...")
     app.run(host='127.0.0.1', port=8080)

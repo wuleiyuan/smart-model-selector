@@ -7,7 +7,7 @@ OpenCode Smart Model Selector 版本管理模块
 - PATCH: 向后兼容的 bug 修复
 """
 
-__version__ = "5.0.0"
+__version__ = "5.1.0"
 __author__ = "OpenCode Team"
 __description__ = "智能模型调度系统"
 
