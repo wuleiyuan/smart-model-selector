@@ -239,6 +239,7 @@ class OpenCodeDaemon:
         last_known_provider = None
         consecutive_failures = 0  # 连续失败计数
         max_backoff = 300  # 最大退避间隔 5 分钟
+        last_startup_time = 0  # 上次 auto_startup 时间，避免频繁触发
         
         while not self.stop_event.is_set():
             try:
@@ -250,8 +251,12 @@ class OpenCodeDaemon:
                     consecutive_failures = 0
                 
                 if not current_provider:
-                    logger.warning("未检测到有效 provider，执行启动加载...")
-                    self.auto_startup()
+                    if time.time() - last_startup_time > 60:
+                        logger.info("当前无固定 provider，使用智能路由模式")
+                        last_startup_time = time.time()
+                
+                # 如果没有固定 provider，就跳过健康检查，直接等待
+                if not current_provider:
                     time.sleep(CHECK_INTERVAL)
                     continue
                 
