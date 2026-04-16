@@ -7,6 +7,8 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/wuleiyuan/smart-model-selector/actions/workflows/ci.yml/badge.svg)](https://github.com/wuleiyuan/smart-model-selector/actions)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://hub.docker.com/r/smartmodelselector/smart-model-selector)
+[![PyPI](https://img.shields.io/badge/PyPI-v5.1.0-orange.svg)](https://pypi.org/project/smart-model-selector/)
 [![Downloads](https://img.shields.io/badge/Downloads-1k/month-orange.svg)]()
 
 ---
@@ -140,6 +142,18 @@ python3 api_server.py
 
 # 测试路由
 python3 selector_core.py "帮我写一个 Python 排序算法"
+```
+
+### Docker 部署（推荐生产环境）
+
+```bash
+# 使用 Docker Compose
+docker-compose up -d
+
+# 或手动构建
+docker build -t smart-model-selector .
+docker run -v $(pwd)/keys.json:/app/keys.json:ro -p 8080:8080 smart-model-selector
+```
 ```
 
 ---

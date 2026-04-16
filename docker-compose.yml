@@ -1,0 +1,16 @@
+services:
+  smart-model-selector:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keys.json:/app/keys.json:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

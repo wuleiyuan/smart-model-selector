@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smart-model-selector"
-version = "4.1.3"
+version = "5.1.0"
 description = "OpenCode Smart Model Selector - AI model routing system with load balancing and failover"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "OpenCode Team", email = "wuleiyuan@gmail.com"}
+    {name = "OpenCode Team", email = "contact@smartmodelselector.dev"}
 ]
 keywords = [
     "ai", "llm", "model-selector", "api-gateway", "claude", "gpt", "gemini", 
@@ -49,10 +49,11 @@ dev = [
 op = "op:main"
 
 [project.urls]
-Homepage = "https://github.com/wuleiyuan/opencode-smart-model-selector"
-Repository = "https://github.com/wuleiyuan/opencode-smart-model-selector"
-Issues = "https://github.com/wuleiyuan/opencode-smart-model-selector/issues"
-Wiki = "https://github.com/wuleiyuan/opencode-smart-model-selector/wiki"
+Homepage = "https://github.com/wuleiyuan/smart-model-selector"
+Repository = "https://github.com/wuleiyuan/smart-model-selector"
+Issues = "https://github.com/wuleiyuan/smart-model-selector/issues"
+Wiki = "https://github.com/wuleiyuan/smart-model-selector/wiki"
+Changelog = "https://github.com/wuleiyuan/smart-model-selector/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]

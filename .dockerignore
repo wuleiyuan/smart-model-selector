@@ -1,0 +1,26 @@
+# Use this template: .dockerignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+env/
+.git/
+.gitignore
+README.md
+CONTRIBUTING.md
+CHANGELOG.md
+LICENSE
+*.log
+.DS_Store
