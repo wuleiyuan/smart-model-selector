@@ -11,8 +11,13 @@ def list_models():
         {"id": "auto", "object": "model", "owned_by": "smart-selector"},
         {"id": "smart-select", "object": "model", "owned_by": "smart-selector"},
         {"id": "gemini-3.1-pro-preview", "object": "model", "owned_by": "google"},
+        {"id": "gemini-2.5-pro", "object": "model", "owned_by": "google"},
+        {"id": "gemini-2.5-flash", "object": "model", "owned_by": "google"},
         {"id": "deepseek-coder", "object": "model", "owned_by": "deepseek"},
-        {"id": "minimax-m2.7", "object": "model", "owned_by": "minimax"}
+        {"id": "deepseek-chat", "object": "model", "owned_by": "deepseek"},
+        {"id": "minimax-m2.7", "object": "model", "owned_by": "minimax"},
+        {"id": "gpt-4o", "object": "model", "owned_by": "openai"},
+        {"id": "claude-3-5-sonnet", "object": "model", "owned_by": "anthropic"}
     ]
     return jsonify({"object": "list", "data": models})
 
@@ -22,10 +27,8 @@ def chat():
     messages = data.get('messages', [])
     is_stream = data.get('stream', False)
     
-    # 🩹 P1 修复：恢复民主！摘除强行注入的 'auto'
     requested_model = data.get('model', 'auto') 
     
-    # 🩹 P0 修复：挂载 OMO / OpenClaw 必须的流式保活头部
     headers = {
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no',
@@ -39,15 +42,31 @@ def chat():
             headers=headers
         )
     else:
-        # 非流式暂不支持，抛出标准的 OpenAI 格式错误
+        # 🩹 兼容非流式请求：收集所有 chunk 后一次性返回
+        full_content = ""
+        for chunk in dispatcher.dispatch_stream(messages, requested_model):
+            if chunk.startswith("data: "):
+                import json as _json
+                try:
+                    chunk_data = _json.loads(chunk[6:])
+                    delta = chunk_data.get("choices", [{}])[0].get("delta", {})
+                    if "content" in delta:
+                        full_content += delta["content"]
+                except:
+                    pass
+        
         return jsonify({
-            "error": {
-                "message": "网关当前强制要求使用流式输出 (Stream = True)",
-                "type": "invalid_request_error",
-                "code": "stream_required"
-            }
-        }), 400
+            "id": "chatcmpl",
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": requested_model,
+            "choices": [{
+                "index": 0,
+                "message": {"role": "assistant", "content": full_content},
+                "finish_reason": "stop"
+            }]
+        })
 
 if __name__ == '__main__':
-    print("🦞 龙虾混动网关 V8.0 (OMO保活 + 路由修复版) 启动中...")
+    print("🦞 龙虾混动网关 V8.1 (全协议兼容版) 启动中...")
     app.run(host='127.0.0.1', port=8080)

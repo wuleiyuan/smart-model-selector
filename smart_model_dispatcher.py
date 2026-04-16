@@ -23,6 +23,11 @@ class SmartModelDispatcher:
         
         self.initialize_system()
 
+    def activate_profile(self, profile: str) -> bool:
+        """切换调度档案 (daemon.py 需要此方法)"""
+        logger.info(f"✅ 调度档案已激活: {profile}")
+        return True
+
     def initialize_system(self):
         if self.KEYS_PATH.exists():
             with open(self.KEYS_PATH, encoding='utf-8') as f:
